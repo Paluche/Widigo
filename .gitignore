@@ -15,3 +15,10 @@ project/plugins/project
 #Scala-IDE specific
 .scala_dependencies
 .worksheet
+
+#Vim temporary files
+*.swp
+*.swo
+
+#Idea
+.idea
