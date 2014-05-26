@@ -1,11 +1,11 @@
 Notes about the project
 =======================
 
-#Google Maps or OpenStreetMap
+#Google Maps or OpenStreetMap?
 I have a preference for the Map of OSM, but GMaps seems to be easy to use, or
 at least more popular.
 
-#Interessting Features
+#Interesting Features
 Step counter embedded as Android sensor
 
 #TODO
