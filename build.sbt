@@ -14,7 +14,9 @@ proguardOptions in Android ++= Seq("-dontobfuscate", "-dontoptimize", "-ignorewa
 
 resolvers += "JCenter" at "http://jcenter.bintray.com"
 
-libraryDependencies += "org.macroid" %% "macroid" % "2.0.0-M1"
+libraryDependencies ++= Seq(
+    "org.macroid" %% "macroid" % "2.0.0-M1",
+    "com.google.android.gms" % "play-services" % "4.4.52")
 
 scalacOptions in Compile ++= Seq("-feature",
   "-P:wartremover:cp:" + (dependencyClasspath in Compile).value.files.map(_.toURL.toString).find(_.contains("org.macroid/macroid_")).get,
