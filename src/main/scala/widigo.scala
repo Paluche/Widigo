@@ -78,7 +78,7 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
       w[TextView] <~ text("Status:"),
       w[TextView] <~ text("??") <~ wire(statusTextBox),
       w[TextView] <~ text("State:"),
-      w[TextView] <~ /*text("??") <~*/ wire(stateTextBox),
+      w[TextView] <~ text("??") <~ wire(stateTextBox),
       w[TextView] <~ text("Latitude:"),
       w[TextView] <~ text("??") <~ wire(latitudeTextBox),
       w[TextView] <~ text("Longitude:"),
@@ -109,18 +109,21 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
      * handle callbacks.
      */
     mLocationClient = new LocationClient(this, this, this);
-    (stateTextBox <~ text("ready")).run
-    servicesConnected
+    (stateTextBox <~ text("Ready")).run
   }
 
-  def checkRequirements {
-    lazy val goToSettings = {
-      lazy val intent: Intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-      this.startActivity(intent)
-    }
-    val dialogView = l[VerticalLinearLayout] (
-      w[TextView] <~ text("Please enable GPS in settings"),
-      w[Button] <~ text("Go to Settings") <~ On.click(Ui(goToSettings)))
+  override def onStart {
+    super.onStart
+    mLocationClient.connect
+  }
+
+  override def onPause {
+    super.onPause
+  }
+
+  override def onStop {
+    mLocationClient.disconnect
+    super.onStop
   }
 
   /*
@@ -172,10 +175,7 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
       return true
     } else {
       // Display an error dialog
-      val dialog: Dialog = GooglePlayServicesUtil.getErrorDialog(resultCode, this, 0)
-      if (dialog != null) {
-        dialog.show
-      }
+      GooglePlayServicesUtil.showErrorDialogFragment(resultCode, this, 0)
       return false
     }
   }
@@ -183,17 +183,25 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
   def getLocation {
     if (servicesConnected) {
       val currentLocation: Location = mLocationClient.getLastLocation()
-      (latitudeTextBox <~ text(s"${currentLocation.getLatitude}")).run
-      (longitudeTextBox <~ text(s"${currentLocation.getLongitude}")).run
+      if (currentLocation == null) {
+        lazy val goToSettings = {
+          lazy val intent: Intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+          this.startActivity(intent)
+        }
+        val dialogView = l[VerticalLinearLayout] (
+          w[TextView] <~ text("Please enable GPS in settings"),
+          w[Button] <~ text("Go to Settings") <~ On.click(Ui(goToSettings)))
+        (dialog(dialogView) <~ title("GPS needed") <~ speak).run
+
+      } else {
+        (statusTextBox    <~ text("Location retreived")).run
+        (latitudeTextBox  <~ text(s"${currentLocation.getLatitude}")).run
+        (longitudeTextBox <~ text(s"${currentLocation.getLongitude}")).run
+      }
     }
   }
 
-  def displayLocation(location: Location) {
-  }
   /*
-
-   override def onStart()
-
    override def onRestart()
 
    override def onResume()
