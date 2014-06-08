@@ -58,9 +58,9 @@ object Widigo {
   var latitudeTextBox  = slot[TextView]
   var longitudeTextBox = slot[TextView]
 
-  var mLocationRequest: LocationRequest = null
-  var mLocationClient: LocationClient   = null
-  var mUpdatesRequested: Boolean        = false
+  var locationRequest: LocationRequest = null
+  var locationClient: LocationClient   = null
+  var updatesRequested: Boolean        = false
 }
 
 class Widigo extends FragmentActivity with Contexts[FragmentActivity]
@@ -88,33 +88,30 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
     setContentView(view.get)
 
     // Create a new global location parameters object
-    mLocationRequest = LocationRequest.create();
+    locationRequest = LocationRequest.create();
 
     /*
      * Set the update interval
      */
-    mLocationRequest.setInterval(UPDATE_INTERVAL_IN_MILLISECONDS);
+    locationRequest.setInterval(UPDATE_INTERVAL_IN_MILLISECONDS);
 
     // Use high accuracy
-    mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+    locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
     // Set the interval ceiling to one minute
-    mLocationRequest.setFastestInterval(FAST_INTERVAL_CEILING_IN_MILLISECONDS);
-
-    // Note that location updates are off until the user turns them on
-    mUpdatesRequested = false;
+    locationRequest.setFastestInterval(FAST_INTERVAL_CEILING_IN_MILLISECONDS);
 
     /*
      * Create a new location client, using the enclosing class to
      * handle callbacks.
      */
-    mLocationClient = new LocationClient(this, this, this);
+    locationClient = new LocationClient(this, this, this);
     (stateTextBox <~ text("Ready")).run
   }
 
   override def onStart {
     super.onStart
-    mLocationClient.connect
+    locationClient.connect
   }
 
   override def onPause {
@@ -122,7 +119,7 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
   }
 
   override def onStop {
-    mLocationClient.disconnect
+    locationClient.disconnect
     super.onStop
   }
 
@@ -133,12 +130,14 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
     if (requestCode == CONNECTION_FAILURE_RESOLUTION_REQUEST) {
       if (resultCode == Activity.RESULT_OK) {
         logD"Error resolved, please re-try operation"
-        (stateTextBox <~ text("Client connected")).run
-        (statusTextBox <~ text("Error resolved, please re-try operation")).run
+        runUi(
+          stateTextBox <~ text("Client connected"),
+          statusTextBox <~ text("Error resolved, please re-try operation"))
       } else {
         logD"Google Play services: unable to resolve connection error"
-        (stateTextBox <~ text("Client disconnected")).run
-        (statusTextBox <~ text("Google Play services: unable to resolve connection error")).run
+        runUi(
+          stateTextBox <~ text("Client disconnected"),
+          statusTextBox <~ text("Google Play services: unable to resolve connection error"))
       }
     } else {
       logD"Received unknown activity request code ${requestCode} in onActivityResult"
@@ -150,13 +149,14 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
   }
 
   override def onDisconnected() {
-    (statusTextBox <~ text("Client disconnected")).run
+    (statusTextBox <~ text("Client disconnected")). run
   }
 
   override def onLocationChanged(currentLocation: Location) {
-    (statusTextBox    <~ text("LocationUpdated")).run
-    (latitudeTextBox  <~ text(s"${currentLocation.getLatitude}")).run
-    (longitudeTextBox <~ text(s"${currentLocation.getLongitude}")).run
+    runUi(
+      statusTextBox    <~ text("LocationUpdated"),
+      latitudeTextBox  <~ text(s"${currentLocation.getLatitude}"),
+      longitudeTextBox <~ text(s"${currentLocation.getLongitude}"))
   }
 
   override def onConnectionFailed(connectionResult: ConnectionResult) {
@@ -182,7 +182,7 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
 
   def getLocation {
     if (servicesConnected) {
-      val currentLocation: Location = mLocationClient.getLastLocation()
+      val currentLocation: Location = locationClient.getLastLocation()
       if (currentLocation == null) {
         lazy val goToSettings = {
           lazy val intent: Intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
@@ -194,9 +194,10 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
         (dialog(dialogView) <~ title("GPS needed") <~ speak).run
 
       } else {
-        (statusTextBox    <~ text("Location retreived")).run
-        (latitudeTextBox  <~ text(s"${currentLocation.getLatitude}")).run
-        (longitudeTextBox <~ text(s"${currentLocation.getLongitude}")).run
+        runUi(
+          statusTextBox    <~ text("Location retreived"),
+          latitudeTextBox  <~ text(s"${currentLocation.getLatitude}"),
+          longitudeTextBox <~ text(s"${currentLocation.getLongitude}"))
       }
     }
   }
