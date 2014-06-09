@@ -9,11 +9,21 @@ at least more popular.
 Step counter embedded as Android sensor
 
 #TODO
-- Think about layouts
-- Find the feature that returns the current activity (which is the main
-  purpose of the project)
+- Think about layouts.
+- Receiving Activity updates.
+- Get a layout with the google Maps.
+- Get a menu, where we select whch activities we save.
 
-#Next objective
-I want as first step to have a working app, with a map and indicating our
-current location on the map.
+#The datas
+Save the datas under the format of tracks containing for the Activities:
+    - IN_VEHICLE, ON_BICYCLE and ON_FOOT
+      a list of points with the time
+    - STILL
+      the position time of start and time of end
+    - UNKNOW and TITLING
+      nothing, we will not save the datas in this case.
+
+# What We do with the datas.
+Display the tracks.
+Have a menu displaying the tracks saved between two dates.
 
