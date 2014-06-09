@@ -28,6 +28,7 @@ import android.provider.Settings
 import android.content.Context
 import android.util.Log
 import android.location.Location
+import android.graphics.Color
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
@@ -53,6 +54,7 @@ object Widigo {
   val FAST_INTERVAL_CEILING_IN_MILLISECONDS = 1
 
   // Layout
+  var startStopButton  = slot[Button]
   var stateTextBox     = slot[TextView]
   var statusTextBox    = slot[TextView]
   var latitudeTextBox  = slot[TextView]
@@ -61,30 +63,51 @@ object Widigo {
   var locationRequest: LocationRequest = null
   var locationClient: LocationClient   = null
   var updatesRequested: Boolean        = false
+
+  // Display variables
+  var status: String = "???"
+  var state: String = "???"
+  var latitude: Double = 0
+  var longitude: Double = 0
+
 }
 
 class Widigo extends FragmentActivity with Contexts[FragmentActivity]
     with LocationListener
     with GooglePlayServicesClient.ConnectionCallbacks
     with GooglePlayServicesClient.OnConnectionFailedListener
-                                           {
+  {
 
   import Widigo._
 
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
-    val view = l[VerticalLinearLayout](
-      w[Button]   <~ text("Start") <~ On.click(Ui(getLocation)),
-      w[TextView] <~ text("Status:"),
-      w[TextView] <~ text("??") <~ wire(statusTextBox),
-      w[TextView] <~ text("State:"),
-      w[TextView] <~ text("??") <~ wire(stateTextBox),
-      w[TextView] <~ text("Latitude:"),
-      w[TextView] <~ text("??") <~ wire(latitudeTextBox),
-      w[TextView] <~ text("Longitude:"),
-      w[TextView] <~ text("??") <~ wire(longitudeTextBox)
-    )
 
+    lazy val stopButtonAction = text("Stop") + Bg.color(Color.RED) + On.click(stopClick)
+    lazy val startButtonAction  = text("Start") + Bg.color(Color.GREEN) + On.click(startClick)
+
+    lazy val startClick: Ui[Unit] = Ui {
+      startPeriodicUpdates
+      runUi(startStopButton <~ stopButtonAction)
+    }
+
+    lazy val stopClick: Ui[Unit] = Ui {
+      stopPeriodicUpdates
+      runUi(startStopButton <~ startButtonAction)
+    }
+
+    // Set layout
+    val view = l[VerticalLinearLayout](
+      w[Button]   <~ text("Start") <~ startButtonAction <~ wire(startStopButton),
+      w[TextView] <~ text("Status:"),
+      w[TextView] <~ text(status) <~ wire(statusTextBox),
+      w[TextView] <~ text("State:"),
+      w[TextView] <~ text(state) <~ wire(stateTextBox),
+      w[TextView] <~ text("Latitude:"),
+      w[TextView] <~ text(s"${latitude}") <~ wire(latitudeTextBox),
+      w[TextView] <~ text("Longitude:"),
+      w[TextView] <~ text(s"${longitude}") <~ wire(longitudeTextBox)
+    )
     setContentView(view.get)
 
     // Create a new global location parameters object
@@ -106,7 +129,8 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
      * handle callbacks.
      */
     locationClient = new LocationClient(this, this, this);
-    (stateTextBox <~ text("Ready")).run
+    state = "Ready"
+    (stateTextBox <~ text(state)).run
   }
 
   override def onStart {
@@ -119,6 +143,8 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
   }
 
   override def onStop {
+    if (locationClient.isConnected)
+      stopPeriodicUpdates
     locationClient.disconnect
     super.onStop
   }
@@ -130,33 +156,37 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
     if (requestCode == CONNECTION_FAILURE_RESOLUTION_REQUEST) {
       if (resultCode == Activity.RESULT_OK) {
         logD"Error resolved, please re-try operation"
-        runUi(
-          stateTextBox <~ text("Client connected"),
-          statusTextBox <~ text("Error resolved, please re-try operation"))
+        state = "Client connected"
+        status = "Error resolved, please re-try operation"
       } else {
         logD"Google Play services: unable to resolve connection error"
-        runUi(
-          stateTextBox <~ text("Client disconnected"),
-          statusTextBox <~ text("Google Play services: unable to resolve connection error"))
+        state = "Client disconnected"
       }
+      (stateTextBox <~ text(state)).run
+      (statusTextBox <~ text(status)).run
     } else {
       logD"Received unknown activity request code ${requestCode} in onActivityResult"
     }
   }
 
   override def onConnected(bundle: Bundle) {
-    (statusTextBox <~ text("Client connected")).run
+    status = "Client connected"
+    (statusTextBox <~ text(status)).run
   }
 
   override def onDisconnected() {
-    (statusTextBox <~ text("Client disconnected")). run
+    status = "Client disconnected"
+    (statusTextBox <~ text(status)). run
   }
 
   override def onLocationChanged(currentLocation: Location) {
-    runUi(
-      statusTextBox    <~ text("LocationUpdated"),
-      latitudeTextBox  <~ text(s"${currentLocation.getLatitude}"),
-      longitudeTextBox <~ text(s"${currentLocation.getLongitude}"))
+    status = "Location updated"
+    latitude  = currentLocation.getLatitude
+    longitude = currentLocation.getLongitude
+
+    (statusTextBox    <~ text(status)).run
+    (latitudeTextBox  <~ text(s"${latitude}")).run
+    (longitudeTextBox <~ text(s"${longitude}")).run
   }
 
   override def onConnectionFailed(connectionResult: ConnectionResult) {
@@ -165,13 +195,13 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
     }
   }
 
-
   def servicesConnected: Boolean = {
     var resultCode: Int = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this)
 
     if (resultCode == ConnectionResult.SUCCESS) {
       logD"Google Play services is available"
-      (statusTextBox <~ text("Google Play services is available")).run
+      status = "Google Play services is available"
+      (statusTextBox <~ text(status)).run
       return true
     } else {
       // Display an error dialog
@@ -180,6 +210,25 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
     }
   }
 
+  def startPeriodicUpdates {
+    locationClient.requestLocationUpdates(locationRequest, this)
+  }
+
+  def stopPeriodicUpdates {
+    locationClient.removeLocationUpdates(this)
+  }
+
+  def startUpdates {
+   if (servicesConnected)
+     startPeriodicUpdates
+  }
+
+  def stopUpdates {
+   if (servicesConnected)
+     stopPeriodicUpdates
+  }
+
+  /* Not used */
   def getLocation {
     if (servicesConnected) {
       val currentLocation: Location = locationClient.getLastLocation()
@@ -194,10 +243,7 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
         (dialog(dialogView) <~ title("GPS needed") <~ speak).run
 
       } else {
-        runUi(
-          statusTextBox    <~ text("Location retreived"),
-          latitudeTextBox  <~ text(s"${currentLocation.getLatitude}"),
-          longitudeTextBox <~ text(s"${currentLocation.getLongitude}"))
+        onLocationChanged(currentLocation)
       }
     }
   }
