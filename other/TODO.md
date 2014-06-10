@@ -23,6 +23,10 @@ Save the datas under the format of tracks containing for the Activities:
     - UNKNOW and TITLING
       nothing, we will not save the datas in this case.
 
+#The Intent Service
+It is the service that will run all the times. It will trigger on detected
+activities. If we are moving we activate the location update.
+
 # What We do with the datas.
 Display the tracks.
 Have a menu displaying the tracks saved between two dates.

@@ -50,7 +50,7 @@ object WidigoIntentService {
     var dateFormat: SimpleDateFormat  = null
 }
 
-class WidigoIntentService extends IntentService("WidigoIntentService") {
+class WidigoIntentService extends IntentService("WidigoActivity") {
   import WidigoIntentService._
 
   override def onHandleIntent(intent: Intent) {
@@ -74,7 +74,7 @@ class WidigoIntentService extends IntentService("WidigoIntentService") {
       // Get the update
       var result: ActivityRecognitionResult = ActivityRecognitionResult.extractResult(intent)
 
-      // Log the update
+      // Log the update TODO Review the logging strategy
       logActivityRecognitionResult(result)
 
       // Get the most probable activity from the list of activities in the update
@@ -86,6 +86,8 @@ class WidigoIntentService extends IntentService("WidigoIntentService") {
       // Get the type of activity
       var activityType: Int = mostProbableActivity.getType()
 
+
+      // TODO review this part of the code.
       // Check to see if the repository contains a previous activity
       if (!prefs.contains(ActivityUtils.KEY_PREVIOUS_ACTIVITY_TYPE)) {
         // This is the first type an activity has been detected. Store the type
