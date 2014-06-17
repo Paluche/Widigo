@@ -1,15 +1,13 @@
-package net.paluche.widigoIntentService
+package net.paluche.widigo
 
 import macroid.LogTag
 
 object ActivityUtils {
 
   // Used to track what type of request is in process
-  object REQUEST_TYPE extends Enumeration
-  {
-    type REQUEST_TYPE = Value
-    val ADD, REMOVE = Value
-  }
+  val REQUEST_TYPE_ADD_UPDATES    = 0
+  val REQUEST_TYPE_REMOVE_UPDATES = 1
+  val REQUEST_TYPE_CONNECT_CLIENT = 2
 
   implicit val logTag = LogTag("ActivitySample")
 

@@ -18,7 +18,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.paluche.widigoIntentService
+package net.paluche.widigo
 
 //import com.google.android.gms.location.LocationListener
 import com.google.android.gms.location.DetectedActivity
@@ -43,15 +43,11 @@ import java.util.Date
 
 import scala.util.control._
 
-import net.paluche.widigoIntentService._
+class ActivityRecognitionIntentService
+    extends IntentService("WidigoActivity") {
 
-object WidigoIntentService {
-    var prefs:       SharedPreferences = null
-    var dateFormat: SimpleDateFormat  = null
-}
-
-class WidigoIntentService extends IntentService("WidigoActivity") {
-  import WidigoIntentService._
+  var prefs:       SharedPreferences = null
+  var dateFormat: SimpleDateFormat  = null
 
   override def onHandleIntent(intent: Intent) {
     // Get a handle to the repository

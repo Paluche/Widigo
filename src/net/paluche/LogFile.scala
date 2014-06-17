@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.paluche.widigoIntentService
+package net.paluche.widigo
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -166,7 +166,7 @@ class LogFile(context: Context) {
   /**
     * Creates an object that writes human-readable lines of text to a file
     */
-  def initLogWriter {
+  def initLogWriter() {
 
     // Catch IO exceptions
     try {
@@ -186,7 +186,7 @@ class LogFile(context: Context) {
   /**
     * Delete log files
     */
-  def removeLogFiles: Boolean = {
+  def removeLogFiles(): Boolean = {
     // Start with the "all files removed" flag set to true
     var removed: Boolean = true
 
