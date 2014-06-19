@@ -1,6 +1,7 @@
 package net.paluche.widigo
 
 import macroid._
+import macroid.ActivityContext
 import macroid.contrib.ExtraTweaks._
 import macroid.contrib.Layouts._
 import macroid.FullDsl._
@@ -28,7 +29,7 @@ import android.text.Spanned
 import android.os.Bundle
 import android.view.ViewGroup.LayoutParams
 import android.view.Gravity
-import android.widget.{ScrollView, TextView, Button, LinearLayout}
+import android.widget.{ProgressBar, TextView, Button, LinearLayout, FrameLayout}
 import android.provider.Settings
 import android.content.Context
 import android.util.Log
@@ -41,6 +42,11 @@ import com.google.android.gms.common.GooglePlayServicesUtil
 import com.google.android.gms.location.LocationClient
 import com.google.android.gms.location.LocationListener
 import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.maps.MapFragment
+import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.model.LatLng
+
 
 import java.io.IOException
 
@@ -57,14 +63,7 @@ object Widigo {
   val UPDATE_INTERVAL_IN_MILLISECONDS       = 10000//60000
   val FAST_INTERVAL_CEILING_IN_MILLISECONDS = 1
 
-  // Layout
-  var statusTextBox = slot[TextView]
-  var logBox        = slot[LinearLayout]
 
-  // Location needs
-  var locationRequest:  LocationRequest = null
-  var locationClient:   LocationClient  = null
-  var updatesRequested: Boolean         = false
 
   // Display variables
   var status:    String = "???"
@@ -81,40 +80,57 @@ object Widigo {
   var logFile: LogFile = null
 }
 
-class Widigo extends FragmentActivity with Contexts[FragmentActivity]
-   // with LocationListener
+object Layout {
+
+}
+class Widigo extends Activity with Contexts[Activity]
+    with LocationListener
     with GooglePlayServicesClient.ConnectionCallbacks
-    with GooglePlayServicesClient.OnConnectionFailedListener {
+    with GooglePlayServicesClient.OnConnectionFailedListener
+    with IdGeneration {
 
   import Widigo._
 
-  def activityPrintBox(name: Spanned) =
-    text(name) + TextSize.large +
-      Tweak[TextView]{ _.setGravity(Gravity.CENTER) } +
-      lp[LinearLayout](LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT, 1.0f)
+  /*
+   * Local variables
+   */
+  // Location
+  var locationRequest:  LocationRequest  = null
+  var locationClient:   LocationClient   = null
+  var locationUpdatesResquested: Boolean = false
 
+  // Layout
+  var map: GoogleMap = null
+
+  // Local position marker
+  var marker: MarkerOptions = new MarkerOptions()
+
+  /*
+   * Activity related function
+   */
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
 
-    /*
-     * Layout
-     */
-    val view = l[VerticalLinearLayout](
-      w[TextView] <~ text("Status:"),
-      w[TextView] <~ text(status) <~ wire(statusTextBox),
-      l[ScrollView] (l[VerticalLinearLayout]() <~ wire(logBox))
-    )
-    setContentView(view.get)
+    // Layout
+    val subLayout1 = l[FrameLayout](
+      f[MapFragment].framed(Id.map, Tag.map)
+        <~ lp[FrameLayout](LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
 
-    /*
-     * Requirements
-     */
+    val subLayout2 = l[FrameLayout]()
+      //w[ProgressBar])
+
+    val layout = l[FrameLayout](
+      subLayout1,
+      subLayout2)
+
+
+    setContentView(layout.get)
+
+    // Requirements
     // Create a new global location parameters object
     locationRequest = LocationRequest.create()
 
-    /*
-     * Set the update interval
-     */
+    // Set the update interval
     locationRequest.setInterval(UPDATE_INTERVAL_IN_MILLISECONDS)
 
     // Use high accuracy
@@ -123,69 +139,104 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
     // Set the interval ceiling to one minute
     locationRequest.setFastestInterval(FAST_INTERVAL_CEILING_IN_MILLISECONDS)
 
-    /*
-     * Create a new location client, using the enclosing class to
-     * handle callbacks.
-     */
+    // Create a new location client, using the enclosing class to
+    // handle callbacks.
     locationClient = new LocationClient(this, this, this)
 
-    status = "Ready"
-    (statusTextBox <~ text(status)).run
-
-    // Set the broadcast receiver intent filer
-    broadcastManager = LocalBroadcastManager.getInstance(this)
-
-    // Create a new Intent filter for the broadcast receiver
-    broadcastFilter = new IntentFilter(ActivityUtils.ACTION_REFRESH_STATUS_LIST)
-    broadcastFilter.addCategory(ActivityUtils.CATEGORY_LOCATION_SERVICES);
-
-    // Get detection requester and remover objects
-    detectionRequester = new DetectionRequester(this)
-    detectionRemover   = new DetectionRemover(this)
-
-    // Create a new LogFile object
-    logFile = LogFile.getInstance(this)
   }
-
-  /*
-   * Register the broadcast receiver and update the log of activity updates
-   */
-  override def onResume() {
-    super.onResume();
-
-    // Register the broadcast receiver
-    broadcastManager.registerReceiver(
-      updateListReceiver,
-      broadcastFilter);
-
-    // Load updated activity history
-    updateActivityHistory();
-  }
-
 
   override def onStart {
     super.onStart
 
+    // Get the google Map to do things on it
+    map = (getFragmentManager().findFragmentById(Id.map))
+              .asInstanceOf[MapFragment].getMap();
     locationClient.connect
 
-    if (!servicesConnected)
+    if (!servicesConnected) {
+      logE"Cannot connect to fucking Google play services"
       return // Can't I do something better?
+    }
 
     // Start the requests for activity recognition updates.
-    requestType = ActivityUtils.REQUEST_TYPE_ADD_UPDATES
-    detectionRequester.requestUpdates
+    //requestType = ActivityUtils.REQUEST_TYPE_ADD_UPDATES
+    //detectionRequester.requestUpdates
   }
 
-  override def onPause {
-    // Stop listening to broadcasts when the Activity isn't visible.
-    broadcastManager.unregisterReceiver(updateListReceiver);
+ override def onPause {
+   // Stop listening to broadcasts when the Activity isn't visible.
 
-    super.onPause
+   locationClient.requestLocationUpdates(locationRequest, this)
+
+   super.onPause
+ }
+
+  /*
+   * Connection callback related functions
+   */
+  override def onConnected(bundle: Bundle) {
+    // Initialize the marker displaying the current location
+    var currentLocation: Location = null
+    while (currentLocation == null)
+      currentLocation = locationClient.getLastLocation()
+
+
+    marker = marker.position(new LatLng(currentLocation.getLatitude,
+       currentLocation.getLongitude))
+
+    map.addMarker(marker)
+
+    // Start Location request updates
+    locationClient.requestLocationUpdates(locationRequest, this)
+    locationUpdatesResquested = true
+  }
+
+  override def onDisconnected() {
+    if (locationUpdatesResquested)
+      locationClient.removeLocationUpdates(this)
+    locationUpdatesResquested = false
   }
 
   /*
-   * Handle results returned to the FragmentActivity by Google Play Services
+   * On connection failed listener related funciton
    */
+  override def onConnectionFailed(connectionResult: ConnectionResult) {
+    if (connectionResult.hasResolution) {
+      connectionResult.startResolutionForResult(this,
+        ActivityUtils.CONNECTION_FAILURE_RESOLUTION_REQUEST)
+    }
+  }
+
+  /*
+   * Location Listener related functions
+   */
+  override def onLocationChanged(currentLocation: Location) {
+    // TODO diplay the location on the map
+      marker.position(new LatLng(currentLocation.getLatitude,
+                                        currentLocation.getLongitude))
+
+
+  }
+
+  /*
+   * Other functions
+   */
+  def servicesConnected: Boolean = {
+    requestType = ActivityUtils.REQUEST_TYPE_CONNECT_CLIENT
+    var resultCode: Int = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this)
+
+    if (resultCode == ConnectionResult.SUCCESS) {
+      status = "Google Play services is available"
+      logD"${status}"
+      return true
+    } else {
+      // Display an error dialog
+      GooglePlayServicesUtil.showErrorDialogFragment(resultCode, this, 0)
+      return false
+    }
+  }
+
+  // Handle results returned to the FragmentActivity by Google Play Services
   override def onActivityResult(requestCode: Int, resultCode: Int, data: Intent) = {
     if (requestCode == ActivityUtils.CONNECTION_FAILURE_RESOLUTION_REQUEST) {
       if (resultCode == Activity.RESULT_OK) {
@@ -196,10 +247,10 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
           }
 
           case ActivityUtils.REQUEST_TYPE_ADD_UPDATES =>
-              detectionRequester.requestUpdates()
+          detectionRequester.requestUpdates()
 
           case ActivityUtils.REQUEST_TYPE_REMOVE_UPDATES =>
-              detectionRemover.removeUpdates(detectionRequester.getRequestPendingIntent)
+          detectionRemover.removeUpdates(detectionRequester.getRequestPendingIntent)
 
           case _ => {
             status = "Unable to resolve"
@@ -207,156 +258,183 @@ class Widigo extends FragmentActivity with Contexts[FragmentActivity]
           }
         }
       }
-      (statusTextBox <~ text(status)).run
     } else {
       logD"Received unknown activity request code ${requestCode} in onActivityResult"
     }
   }
 
-  override def onConnected(bundle: Bundle) {
-    status = "Client connected"
-    (statusTextBox <~ text(status)).run
-  }
-
-  override def onDisconnected() {
-    status = "Client disconnected"
-    (statusTextBox <~ text(status)). run
-  }
-
-  override def onConnectionFailed(connectionResult: ConnectionResult) {
-    if (connectionResult.hasResolution) {
-      connectionResult.startResolutionForResult(this,
-        ActivityUtils.CONNECTION_FAILURE_RESOLUTION_REQUEST)
-    }
-  }
-
-  def servicesConnected: Boolean = {
-    requestType = ActivityUtils.REQUEST_TYPE_CONNECT_CLIENT
-    var resultCode: Int = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this)
-
-    if (resultCode == ConnectionResult.SUCCESS) {
-      status = "Google Play services is available"
-      logD"${status}"
-      (statusTextBox <~ text(status)).run
-      return true
-    } else {
-      // Display an error dialog
-      GooglePlayServicesUtil.showErrorDialogFragment(resultCode, this, 0)
-      return false
-    }
-  }
-
-  /**
-    * Display the activity detection history stored in the
-    * log file
-    */
-  def updateActivityHistory() {
-    // Try to load data from the history file
-    try {
-      // Load log file records into the List
-      var activityDetectionHistory = logFile.loadLogFile()
-
-      // Clear the adapter of existing data
-      //mStatusAdapter.clear()
-
-      // Add each element of the history to the adapter
-      for (activity: Spanned <- activityDetectionHistory)
-        runUi(logBox <~ addViews(List(w[TextView] <~ activityPrintBox(activity))))
-
-      /*
-      // If the number of loaded records is greater than the max log size
-      // And delete the old log file
-      if ((mStatusAdapter.getCount() > MAX_LOG_SIZE) &&
-        !logFile.removeLogFiles()) {
-        // Log an error if unable to delete the log file
-        logE"Log file deletion error"
-      }
-      */
-
-      // Trigger the adapter to update the display
-      //mStatusAdapter.notifyDataSetChanged()
-
-    } catch {
-      // If an error occurs while reading the history file
-      case e: IOException =>
-        logE"${e.getMessage}"
-    }
-  }
-
-  var updateListReceiver: BroadcastReceiver = new BroadcastReceiver() {
-    override def onReceive(context: Context, intent: Intent) {
-
-      /*
-       * When an Intent is received from the update listener IntentService, update
-       * the displayed log.
-       */
-      updateActivityHistory();
-    }
-  }
 }
-  /*
-   * Actually I don't want the requests to stop
 
-  override def onStop {
+/*
+ class Widigo extends Activity with Contexts[Activity]
+ // with LocationListener
+ with GooglePlayServicesClient.ConnectionCallbacks
+ with GooglePlayServicesClient.OnConnectionFailedListener
+ with IdGeneration {
 
-    if (locationClient.isConnected)
-      stopPeriodicUpdates
-    locationClient.disconnect
-    super.onStop
-  }
+   import Widigo._
+   import Layout._
 
-   override def onLocationChanged(currentLocation: Location) {
-     status = "Location updated"
-     latitude  = currentLocation.getLatitude
-     longitude = currentLocation.getLongitude
+   def activityPrintBox(name: Spanned) =
+   text(name) + TextSize.large +
+   Tweak[TextView]{ _.setGravity(Gravity.CENTER) } +
+   lp[LinearLayout](LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT, 1.0f)
 
-     (statusTextBox    <~ text(status)).run
-     (latitudeTextBox  <~ text(s"${latitude}")).run
-     (longitudeTextBox <~ text(s"${longitude}")).run
+   override def onCreate(bundle: Bundle) {
+     super.onCreate(bundle)
+
+     // Layout
+     val layout = l[FrameLayout](
+       //w[TextView] <~ text(status) <~ wire(statusTextBox),
+       f[MapFragment].framed(Id.map, Tag.map) <~
+       lp[FrameLayout](LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+     )
+   setContentView(layout.get)
+
+   // Requirements
+   // Create a new global location parameters object
+   locationRequest = LocationRequest.create()
+
+   // Set the update interval
+   locationRequest.setInterval(UPDATE_INTERVAL_IN_MILLISECONDS)
+
+   // Use high accuracy
+   locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+
+   // Set the interval ceiling to one minute
+   locationRequest.setFastestInterval(FAST_INTERVAL_CEILING_IN_MILLISECONDS)
+
+   // Create a new location client, using the enclosing class to
+   // handle callbacks.
+   locationClient = new LocationClient(this, this, this)
+
+   status = "Ready"
+   (statusTextBox <~ text(status)).run
+
+   // Set the broadcast receiver intent filer
+   broadcastManager = LocalBroadcastManager.getInstance(this)
+
+   // Create a new Intent filter for the broadcast receiver
+   broadcastFilter = new IntentFilter(ActivityUtils.ACTION_REFRESH_STATUS_LIST)
+   broadcastFilter.addCategory(ActivityUtils.CATEGORY_LOCATION_SERVICES);
+
+   // Get detection requester and remover objects
+   detectionRequester = new DetectionRequester(this)
+   detectionRemover   = new DetectionRemover(this)
+
+   // Create a new LogFile object
+   logFile = LogFile.getInstance(this)
+ }
+
+ // Register the broadcast receiver and update the log of activity updates
+ override def onResume() {
+   super.onResume();
+
+   // Register the broadcast receiver
+   broadcastManager.registerReceiver(
+     updateListReceiver,
+     broadcastFilter);
+
+   // Load updated activity history
+   updateActivityHistory();
+ }
+ // Display the activity detection history stored in the
+ // log file
+ def updateActivityHistory() {
+   // Try to load data from the history file
+   try {
+     // Load log file records into the List
+     var activityDetectionHistory = logFile.loadLogFile()
+
+     // Clear the adapter of existing data
+     //mStatusAdapter.clear()
+
+     // Add each element of the history to the adapter
+     for (activity: Spanned <- activityDetectionHistory)
+       runUi(logBox <~ addViews(List(w[TextView] <~ activityPrintBox(activity))))
+
+     // If the number of loaded records is greater than the max log size
+     // And delete the old log file
+     if ((mStatusAdapter.getCount() > MAX_LOG_SIZE) &&
+       !logFile.removeLogFiles()) {
+       // Log an error if unable to delete the log file
+       logE"Log file deletion error"
+     }
+
+     // Trigger the adapter to update the display
+     //mStatusAdapter.notifyDataSetChanged()
+
+   } catch {
+     // If an error occurs while reading the history file
+     case e: IOException =>
+     logE"${e.getMessage}"
    }
+ }
 
-   def startPeriodicUpdates {
-     locationClient.requestLocationUpdates(locationRequest, this)
+ var updateListReceiver: BroadcastReceiver = new BroadcastReceiver() {
+   override def onReceive(context: Context, intent: Intent) {
+
+     // When an Intent is received from the update listener IntentService, update
+     // the displayed log.
+     updateActivityHistory();
    }
+ }
+}
+*/
+/*
+ * Actually I don't want the requests to stop
 
-   def stopPeriodicUpdates {
-     locationClient.removeLocationUpdates(this)
-   }
+ override def onStop {
 
-   def startUpdates {
-     if (servicesConnected)
-       startPeriodicUpdates
-   }
+   if (locationClient.isConnected)
+     stopPeriodicUpdates
+   locationClient.disconnect
+   super.onStop
+ }
 
-   def stopUpdates {
-     if (servicesConnected)
-       stopPeriodicUpdates
-   }
 
-   def getLocation {
-     if (servicesConnected) {
-       val currentLocation: Location = locationClient.getLastLocation()
-       if (currentLocation == null) {
-         lazy val goToSettings = {
-           lazy val intent: Intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-           this.startActivity(intent)
-         }
-         val dialogView = l[VerticalLinearLayout] (
-           w[TextView] <~ text("Please enable GPS in settings"),
-           w[Button] <~ text("Go to Settings") <~ On.click(Ui(goToSettings)))
-         (dialog(dialogView) <~ title("GPS needed") <~ speak).run
+ def startPeriodicUpdates {
+   locationClient.requestLocationUpdates(locationRequest, this)
+ }
 
-       } else {
-         onLocationChanged(currentLocation)
+ def stopPeriodicUpdates {
+   locationClient.removeLocationUpdates(this)
+ }
+
+ def startUpdates {
+   if (servicesConnected)
+     startPeriodicUpdates
+ }
+
+ def stopUpdates {
+   if (servicesConnected)
+     stopPeriodicUpdates
+ }
+
+ def getLocation {
+   if (servicesConnected) {
+     val currentLocation: Location = locationClient.getLastLocation()
+     if (currentLocation == null) {
+       lazy val goToSettings = {
+         lazy val intent: Intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+         this.startActivity(intent)
        }
+       val dialogView = l[VerticalLinearLayout] (
+         w[TextView] <~ text("Please enable GPS in settings"),
+         w[Button] <~ text("Go to Settings") <~ On.click(Ui(goToSettings)))
+       (dialog(dialogView) <~ title("GPS needed") <~ speak).run
+
+     } else {
+       onLocationChanged(currentLocation)
      }
    }
+ }
 
-   override def onRestart()
+ override def onRestart()
 
-   override def onPause()
+ override def onPause()
 
-   override def onStop()
+ override def onStop()
 
-   override def onDestroy()
-   */
+ override def onDestroy()
+ */
