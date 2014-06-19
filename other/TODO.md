@@ -31,3 +31,12 @@ activities. If we are moving we activate the location update.
 Display the tracks.
 Have a menu displaying the tracks saved between two dates.
 
+#The options:
+##Tracking options
+Allows the user to activate / de-activate the tracking and also select for
+which kind of activities we track and save.
+
+##My tracks options
+Here we will select wich tracks to display we will have two sections allowing
+to select the tracks between two dates and the list of the saved tracks.
+Allowing to delete the tracks.

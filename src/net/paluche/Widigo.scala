@@ -29,7 +29,7 @@ import android.text.Spanned
 import android.os.Bundle
 import android.view.ViewGroup.LayoutParams
 import android.view.Gravity
-import android.widget.{ProgressBar, TextView, Button, LinearLayout, FrameLayout}
+import android.widget.{CheckBox, Switch, Space, ListView, DatePicker, TextView, Button, LinearLayout, FrameLayout}
 import android.provider.Settings
 import android.content.Context
 import android.util.Log
@@ -57,10 +57,8 @@ import java.io.IOException
 object Widigo {
 
   // Constants
-  val UPDATE_INTERVAL_IN_MILLISECONDS       = 10000//60000
-  val FAST_INTERVAL_CEILING_IN_MILLISECONDS = 1
-
-
+  val UPDATE_INTERVAL_IN_MILLISECONDS       = 60000
+  val FAST_INTERVAL_CEILING_IN_MILLISECONDS = 1000
 
   // Display variables
   var status:    String = "???"
@@ -99,26 +97,65 @@ class Widigo extends Activity with Contexts[Activity]
   // Local position marker
   var marker: MarkerOptions = new MarkerOptions()
 
+  // Buttons
+  // TODO this solution does not work, we loose the map when the
+  lazy val returnButton =         ??? //setContentView(homeLayout.get)
+  lazy val trackingOptionButton = setContentView(trackingOptionLayout.get)
+  lazy val myTracksOptionButton = setContentView(myTracksOptionLayout.get)
+
+  // Layout
+  val optionButtonLayout = l[HorizontalLinearLayout](
+    w[Button] <~ text("Tracking Option") <~ On.click(Ui(trackingOptionButton)),
+    w[Button] <~ text("My Tracks") <~ On.click(Ui(myTracksOptionButton)))
+
+  val mapLayout = l[FrameLayout](f[MapFragment].framed(Id.map, Tag.map)
+    <~ lp[FrameLayout](LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+
+  val homeLayout = l[VerticalLinearLayout](
+    optionButtonLayout,
+    mapLayout)
+
+  val trackingOption = l[VerticalLinearLayout](
+    w[Switch] <~ text("Tracking On"),
+    w[Space],
+    w[TextView] <~ text("Specify Activities"),
+    w[CheckBox] <~ text("Still"),
+    w[CheckBox] <~ text("Walking"),
+    w[CheckBox] <~ text("Running"),
+    w[CheckBox] <~ text("In vehicle"),
+    w[CheckBox] <~ text("On bicycle"))
+
+  val trackingOptionLayout = l[VerticalLinearLayout](
+    w[Button] <~ text("Return") <~ On.click(Ui(returnButton)),
+    l[FrameLayout](
+      mapLayout,
+      trackingOption
+    ))
+
+  val myTracksOption = l[VerticalLinearLayout](
+    l[HorizontalLinearLayout](
+      w[TextView] <~ text("Start Date"),
+      w[DatePicker]),
+    l[HorizontalLinearLayout](
+      w[TextView] <~ text("Stop Date"),
+      w[DatePicker]),
+    w[ListView])
+
+  val myTracksOptionLayout = l[VerticalLinearLayout](
+    w[Button] <~ text("Return") <~ On.click(Ui(returnButton)),
+    l[FrameLayout](
+      mapLayout,
+      myTracksOption
+    ))
+
   /*
    * Activity related function
    */
   override def onCreate(bundle: Bundle) {
     super.onCreate(bundle)
 
-    // Layout
-    val subLayout1 = l[FrameLayout](
-      f[MapFragment].framed(Id.map, Tag.map)
-        <~ lp[FrameLayout](LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-
-    val subLayout2 = l[FrameLayout]()
-      //w[ProgressBar])
-
-    val layout = l[FrameLayout](
-      subLayout1,
-      subLayout2)
-
-
-    setContentView(layout.get)
+    setContentView(homeLayout.get)
+    //setContentView(myTracksOptionLayout.get)
 
     // Requirements
     // Create a new global location parameters object
@@ -137,6 +174,7 @@ class Widigo extends Activity with Contexts[Activity]
     // handle callbacks.
     locationClient = new LocationClient(this, this, this)
 
+    locationClient.connect
   }
 
   override def onStart {
@@ -144,8 +182,7 @@ class Widigo extends Activity with Contexts[Activity]
 
     // Get the google Map to do things on it
     map = (getFragmentManager().findFragmentById(Id.map))
-              .asInstanceOf[MapFragment].getMap();
-    locationClient.connect
+    .asInstanceOf[MapFragment].getMap();
 
     if (!servicesConnected) {
       logE"Cannot connect to fucking Google play services"
@@ -157,13 +194,25 @@ class Widigo extends Activity with Contexts[Activity]
     //detectionRequester.requestUpdates
   }
 
- override def onPause {
-   // Stop listening to broadcasts when the Activity isn't visible.
+  override def onPause {
+    // Stop listening to broadcasts when the Activity isn't visible.
 
-   locationClient.requestLocationUpdates(locationRequest, this)
+    locationClient.requestLocationUpdates(locationRequest, this)
 
-   super.onPause
- }
+    super.onPause
+  }
+  // Register the broadcast receiver and update the log of activity updates
+  override def onResume() {
+    super.onResume();
+
+    //// Register the broadcast receiver
+    //broadcastManager.registerReceiver(
+      //  updateListReceiver,
+      //  broadcastFilter);
+
+    //// Load updated activity history
+    //updateActivityHistory();
+  }
 
   /*
    * Connection callback related functions
@@ -206,11 +255,8 @@ class Widigo extends Activity with Contexts[Activity]
    * Location Listener related functions
    */
   override def onLocationChanged(currentLocation: Location) {
-    // TODO diplay the location on the map
-      marker.position(new LatLng(currentLocation.getLatitude,
-                                        currentLocation.getLongitude))
-
-
+    marker.position(new LatLng(currentLocation.getLatitude,
+      currentLocation.getLongitude))
   }
 
   /*
@@ -257,7 +303,6 @@ class Widigo extends Activity with Contexts[Activity]
       logD"Received unknown activity request code ${requestCode} in onActivityResult"
     }
   }
-
 }
 
 /*
@@ -268,7 +313,6 @@ class Widigo extends Activity with Contexts[Activity]
  with IdGeneration {
 
    import Widigo._
-   import Layout._
 
    def activityPrintBox(name: Spanned) =
    text(name) + TextSize.large +
@@ -321,18 +365,6 @@ class Widigo extends Activity with Contexts[Activity]
    logFile = LogFile.getInstance(this)
  }
 
- // Register the broadcast receiver and update the log of activity updates
- override def onResume() {
-   super.onResume();
-
-   // Register the broadcast receiver
-   broadcastManager.registerReceiver(
-     updateListReceiver,
-     broadcastFilter);
-
-   // Load updated activity history
-   updateActivityHistory();
- }
  // Display the activity detection history stored in the
  // log file
  def updateActivityHistory() {

@@ -179,7 +179,7 @@ class LogFile(context: Context) {
 
       // If an IO exception occurs, print a stack trace
     } catch {
-      case e: IOException => e.printStackTrace()
+      case (e: IOException) => e.printStackTrace()
     }
   }
 
