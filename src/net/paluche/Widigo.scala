@@ -39,12 +39,9 @@ import android.graphics.Color
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GooglePlayServicesClient
 import com.google.android.gms.common.GooglePlayServicesUtil
-import com.google.android.gms.location.LocationClient
-import com.google.android.gms.location.LocationListener
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.maps.MapFragment
+import com.google.android.gms.location._
+import com.google.android.gms.maps._
 import com.google.android.gms.maps.model.MarkerOptions
-import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLng
 
 
@@ -80,9 +77,6 @@ object Widigo {
   var logFile: LogFile = null
 }
 
-object Layout {
-
-}
 class Widigo extends Activity with Contexts[Activity]
     with LocationListener
     with GooglePlayServicesClient.ConnectionCallbacks
@@ -180,11 +174,12 @@ class Widigo extends Activity with Contexts[Activity]
     while (currentLocation == null)
       currentLocation = locationClient.getLastLocation()
 
+    val currentLatLng: LatLng = new LatLng(currentLocation.getLatitude, currentLocation.getLongitude)
 
-    marker = marker.position(new LatLng(currentLocation.getLatitude,
-       currentLocation.getLongitude))
-
+    marker = marker.position(currentLatLng)
     map.addMarker(marker)
+
+    map.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 16))
 
     // Start Location request updates
     locationClient.requestLocationUpdates(locationRequest, this)
