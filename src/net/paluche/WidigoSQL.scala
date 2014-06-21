@@ -31,10 +31,9 @@ object ActivityHAndler {
 // We will save a list of points, each point belong to an activity number and
 // an activity type. After we have the information about the location. And
 // finally the timestamp (UTC time in milliseconds since January 1, 1970).
-class ActivityPoint (val ID: Int,
-                     val timestamp: Long,
-                     val activityType: Int,
-                     val activityID: Int,
+class ActivityPoint (val timestamp: Long,
+                     val activityType: Integer,
+                     val activityID: Integer,
                      val latitude: Double,
                      val longitude: Double,
                      val hasAltitude: Boolean,
@@ -79,25 +78,24 @@ class DbHelper(context: Context) extends
 
   }
 
-  def genReqCreate(activityPoint: ActivityPoint): String =
-  ""
-
-  def addEntry(db:SQLiteDatabase, activityPoint: ActivityPoint): Long = {
+  def addActivityEntry(db:SQLiteDatabase, activityPoint: ActivityPoint): Long = {
     var values: ContentValues = new ContentValues()
 
-    values.put(columnNameTimestamp,    activityPoint.timestamp)
+    values.put(columnNameTimestamp, activityPoint.timestamp.asInstanceOf[java.lang.Long])
     values.put(columnNameActivityType, activityPoint.activityType)
-    values.put(columnNameActivityID,   activityPoint.activityID)
-    values.put(columnNameLatitude,     activityPoint.latitude)
-    values.put(columnNameLongitude,    activityPoint.longitude)
+    values.put(columnNameActivityID, activityPoint.activityID)
+    values.put(columnNameLatitude, activityPoint.latitude)
+    values.put(columnNameLongitude, activityPoint.longitude)
+
     if (activityPoint.hasAltitude)
-      values.put(columnNameAltitude,     activityPoint.altitude)
+      values.put(columnNameAltitude, activityPoint.altitude)
     else
-      values.put(columnNameAltitude, null)
+      values.putNull(columnNameAltitude)
+
     if (activityPoint.hasSpeed)
-      values.put(columnNameSpeed,     activityPoint.speed)
+      values.put(columnNameSpeed, activityPoint.speed.toDouble)
     else
-      values.put(columnNameSpeed, null)
+      values.putNull(columnNameSpeed)
 
 
     return db.insert( tableName, null, values)
