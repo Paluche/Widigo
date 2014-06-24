@@ -48,7 +48,7 @@ class ActivityPoint (val timestamp: Long,
 class Activity(val polylineOptions: PolylineOptions,
                val activityID: Int,
                val activityType: Int,
-               val poitList: List[ActivityPoint] )
+               val pointList: List[ActivityPoint] )
 
 class DbHelper(context: Context) extends
     SQLiteOpenHelper(context, "Widigo.db", null, 1) {
@@ -192,10 +192,10 @@ class DbHelper(context: Context) extends
     var activities: List[Activity] = List()
 
     do {
-      var polylineOpt: PolylineOptions = new PolylineOptions()
+      var polylineOpt: PolylineOptions   = new PolylineOptions()
       var pointList: List[ActivityPoint] = List()
-      var activityID = cursor.getInt(columnIndexActivityID)
-      var activityType = cursor.getInt(columnIndexActivityType)
+      var activityID                     = cursor.getInt(columnIndexActivityID)
+      var activityType                   = cursor.getInt(columnIndexActivityType)
 
       // Set the color according to the type of activity
       activityType match {

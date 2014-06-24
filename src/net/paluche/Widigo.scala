@@ -1,10 +1,9 @@
 package net.paluche.widigo
 
 import macroid._
+import macroid.FullDsl._
 import macroid.ActivityContext
 import macroid.contrib.ExtraTweaks._
-import macroid.contrib.Layouts._
-import macroid.FullDsl._
 import macroid.util.Ui
 import macroid.contrib.Layouts._
 import macroid.AppContext
@@ -22,19 +21,22 @@ import android.content.IntentFilter;
 import android.content.BroadcastReceiver;
 import android.app.Activity
 import android.app.Dialog
-import android.support.v4.app.DialogFragment
-import android.support.v4.app.FragmentActivity
-import android.support.v4.content.LocalBroadcastManager;
 import android.text.Spanned
 import android.os.Bundle
 import android.view.ViewGroup.LayoutParams
 import android.view.Gravity
+import android.view.Menu
 import android.widget.{CheckBox, Switch, Space, ListView, DatePicker, TextView, Button, LinearLayout, FrameLayout}
 import android.provider.Settings
 import android.content.Context
 import android.util.Log
 import android.location.Location
 import android.graphics.Color
+
+import android.support.v4.app.DialogFragment
+import android.support.v4.app.FragmentActivity
+import android.app.ActionBar
+import android.support.v4.content.LocalBroadcastManager;
 
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GooglePlayServicesClient
@@ -44,16 +46,8 @@ import com.google.android.gms.maps._
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.LatLng
 
-
 import java.io.IOException
 
-/*
- * This is a test app that connects to Google Play service and retrieve the
- * current position and display it on the screen when we push on a "start"
- * button.
- * This code is inspired from "retrieving the Current Location" code example
- * available at http://developer.android.com/training/location/retrieve-current.html
- */
 object Widigo {
 
   // Constants
@@ -61,7 +55,7 @@ object Widigo {
   val FAST_INTERVAL_CEILING_IN_MILLISECONDS = 1000
 
   // Display variables
-  var status:    String = "???"
+  var status: String = "???"
 
   // Intent for activity recognition needs
   var broadcastFilter:            IntentFilter          = null
@@ -80,6 +74,7 @@ class Widigo extends Activity with Contexts[Activity]
     with GooglePlayServicesClient.ConnectionCallbacks
     with GooglePlayServicesClient.OnConnectionFailedListener
     with IdGeneration {
+//    with ActionBarActivity {
 
   import Widigo._
 
@@ -98,55 +93,27 @@ class Widigo extends Activity with Contexts[Activity]
   var marker: MarkerOptions = new MarkerOptions()
 
   // Buttons
-  // TODO this solution does not work, we loose the map when the
-  lazy val returnButton =         ??? //setContentView(homeLayout.get)
-  lazy val trackingOptionButton = setContentView(trackingOptionLayout.get)
-  lazy val myTracksOptionButton = setContentView(myTracksOptionLayout.get)
+  // Content view.
+  var optionDisplayed : Boolean = false
+  lazy val trackingOptionButton = {
+    var intent: Intent = new Intent(this, classOf[TrackingOptionActivity])
+    startActivity(intent)
+  }
+
+  lazy val myTracksOptionButton = {
+    var intent: Intent = new Intent(this, classOf[MyTracksOptionActivity])
+    startActivity(intent)
+  }
 
   // Layout
   val optionButtonLayout = l[HorizontalLinearLayout](
     w[Button] <~ text("Tracking Option") <~ On.click(Ui(trackingOptionButton)),
     w[Button] <~ text("My Tracks") <~ On.click(Ui(myTracksOptionButton)))
 
-  val mapLayout = l[FrameLayout](f[MapFragment].framed(Id.map, Tag.map)
+  val homeLayout = l[FrameLayout](f[MapFragment].framed(Id.map, Tag.map)
     <~ lp[FrameLayout](LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
 
-  val homeLayout = l[VerticalLinearLayout](
-    optionButtonLayout,
-    mapLayout)
-
-  val trackingOption = l[VerticalLinearLayout](
-    w[Switch] <~ text("Tracking On"),
-    w[Space],
-    w[TextView] <~ text("Specify Activities"),
-    w[CheckBox] <~ text("Still"),
-    w[CheckBox] <~ text("Walking"),
-    w[CheckBox] <~ text("Running"),
-    w[CheckBox] <~ text("In vehicle"),
-    w[CheckBox] <~ text("On bicycle"))
-
-  val trackingOptionLayout = l[VerticalLinearLayout](
-    w[Button] <~ text("Return") <~ On.click(Ui(returnButton)),
-    l[FrameLayout](
-      mapLayout,
-      trackingOption
-    ))
-
-  val myTracksOption = l[VerticalLinearLayout](
-    l[HorizontalLinearLayout](
-      w[TextView] <~ text("Start Date"),
-      w[DatePicker]),
-    l[HorizontalLinearLayout](
-      w[TextView] <~ text("Stop Date"),
-      w[DatePicker]),
-    w[ListView])
-
-  val myTracksOptionLayout = l[VerticalLinearLayout](
-    w[Button] <~ text("Return") <~ On.click(Ui(returnButton)),
-    l[FrameLayout](
-      mapLayout,
-      myTracksOption
-    ))
+  var actionBar: ActionBar = null
 
   /*
    * Activity related function
@@ -155,7 +122,6 @@ class Widigo extends Activity with Contexts[Activity]
     super.onCreate(bundle)
 
     setContentView(homeLayout.get)
-    //setContentView(myTracksOptionLayout.get)
 
     // Requirements
     // Create a new global location parameters object
@@ -175,6 +141,14 @@ class Widigo extends Activity with Contexts[Activity]
     locationClient = new LocationClient(this, this, this)
 
     locationClient.connect
+
+    actionBar = getActionBar
+    // Hide the title of the app to leave more place for options buttons
+    actionBar.setCustomView(optionButtonLayout.get)
+    actionBar.setDisplayOptions(
+      ActionBar.DISPLAY_SHOW_CUSTOM | ActionBar.DISPLAY_USE_LOGO,
+      ActionBar.DISPLAY_HOME_AS_UP | ActionBar.DISPLAY_SHOW_CUSTOM |
+      ActionBar.DISPLAY_USE_LOGO | ActionBar.DISPLAY_SHOW_TITLE)
   }
 
   override def onStart {
@@ -212,6 +186,18 @@ class Widigo extends Activity with Contexts[Activity]
 
     //// Load updated activity history
     //updateActivityHistory();
+  }
+
+  override def onBackPressed() {
+    if (optionDisplayed) {
+      setContentView(homeLayout.get)
+      optionDisplayed = false
+    } else
+      finish()
+  }
+
+  override def onContentChanged() {
+    logD"Content changed"
   }
 
   /*
