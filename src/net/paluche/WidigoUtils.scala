@@ -2,14 +2,14 @@ package net.paluche.widigo
 
 import macroid.LogTag
 
-object ActivityUtils {
+object WidigoUtils {
 
   // Used to track what type of request is in process
   val REQUEST_TYPE_ADD_UPDATES    = 0
   val REQUEST_TYPE_REMOVE_UPDATES = 1
   val REQUEST_TYPE_CONNECT_CLIENT = 2
 
-  implicit val logTag = LogTag("ActivitySample")
+  implicit val logTag = LogTag("Widigo")
 
   /*
    * Define a request code to send to Google Play services
@@ -17,21 +17,25 @@ object ActivityUtils {
    */
   val CONNECTION_FAILURE_RESOLUTION_REQUEST: Int = 9000
 
+  // Location Updates constants
+  val UPDATE_INTERVAL_IN_MILLISECONDS       = 60000
+  val FAST_INTERVAL_CEILING_IN_MILLISECONDS = 1000
+
   // ent actions and extras for sending information from the IntentService to the Activity
   val ACTION_CONNECTION_ERROR: String =
-    "com.example.android.activityrecognition.ACTION_CONNECTION_ERROR"
+    "net.paluche.widigo.ACTION_CONNECTION_ERROR"
 
-  val  ACTION_REFRESH_STATUS_LIST: String =
-    "com.example.android.activityrecognition.ACTION_REFRESH_STATUS_LIST"
+  val ACTION_REFRESH_STATUS_LIST: String =
+    "net.paluche.widigo.ACTION_REFRESH_STATUS_LIST"
 
-  val  CATEGORY_LOCATION_SERVICES: String =
-    "com.example.android.activityrecognition.CATEGORY_LOCATION_SERVICES"
+  val CATEGORY_LOCATION_SERVICES: String =
+    "net.paluche.widigo.CATEGORY_LOCATION_SERVICES"
 
-  val  EXTRA_CONNECTION_ERROR_CODE: String =
-    "com.example.android.activityrecognition.EXTRA_CONNECTION_ERROR_CODE"
+  val EXTRA_CONNECTION_ERROR_CODE: String =
+    "net.paluche.widigo.EXTRA_CONNECTION_ERROR_CODE"
 
-  val  EXTRA_CONNECTION_ERROR_MESSAGE: String =
-    "com.example.android.activityrecognition.EXTRA_CONNECTION_ERROR_MESSAGE"
+  val EXTRA_CONNECTION_ERROR_MESSAGE: String =
+    "net.paluche.widigo.EXTRA_CONNECTION_ERROR_MESSAGE"
 
   // Constants used to establish the activity update erval
   val  MILLISECONDS_PER_SECOND : Int = 1000

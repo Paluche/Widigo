@@ -33,7 +33,6 @@ import android.content.SharedPreferences
 import android.content.SharedPreferences.Editor
 import android.provider.Settings
 import android.support.v4.app.NotificationCompat
-import android.util.Log
 
 import macroid.FullDsl._
 
@@ -45,6 +44,7 @@ import scala.util.control._
 
 class ActivityRecognitionIntentService
     extends IntentService("WidigoActivity") {
+  import WidigoUtils._
 
   var prefs:       SharedPreferences = null
   var dateFormat: SimpleDateFormat  = null
@@ -52,55 +52,43 @@ class ActivityRecognitionIntentService
   override def onHandleIntent(intent: Intent) {
     // Get a handle to the repository
     prefs = getApplicationContext.getSharedPreferences(
-              ActivityUtils.SHARED_PREFERENCES,
-              Context.MODE_PRIVATE)
-
-    // Get a date formatter
-    try {
-      dateFormat = DateFormat.getDateTimeInstance().asInstanceOf[SimpleDateFormat]
-    } catch {
-      case NonFatal(exc) => logE"Internat error: date formatting exeption."
-    }
-
-    dateFormat.applyPattern("yyyy-MM-dd HH:mm:ss.SSSZ")
-    dateFormat.applyLocalizedPattern(dateFormat.toLocalizedPattern)
+              SHARED_PREFERENCES, Context.MODE_PRIVATE)
 
     // If the intent contains an Activity update
     if (ActivityRecognitionResult.hasResult(intent)) {
       // Get the update
       var result: ActivityRecognitionResult = ActivityRecognitionResult.extractResult(intent)
 
-      // Log the update TODO Review the logging strategy
-      logActivityRecognitionResult(result)
-
       // Get the most probable activity from the list of activities in the update
-      var mostProbableActivity: DetectedActivity = result.getMostProbableActivity()
+      var currentActivity: DetectedActivity = result.getMostProbableActivity()
 
       // Get the confidence percentage for the most probable activity
-      var confidence: Int = mostProbableActivity.getConfidence()
+      var currentActivityConfidence: Int = currentActivity.getConfidence()
 
       // Get the type of activity
-      var activityType: Int = mostProbableActivity.getType()
+      var currentActivityType: Int = currentActivity.getType()
 
-
-      // TODO review this part of the code.
       // Check to see if the repository contains a previous activity
-      if (!prefs.contains(ActivityUtils.KEY_PREVIOUS_ACTIVITY_TYPE)) {
+      if (!prefs.contains(KEY_PREVIOUS_ACTIVITY_TYPE)) {
         // This is the first type an activity has been detected. Store the type
         var editor: Editor = prefs.edit()
-        editor.putInt(ActivityUtils.KEY_PREVIOUS_ACTIVITY_TYPE, activityType)
+        editor.putInt(KEY_PREVIOUS_ACTIVITY_TYPE, currentActivityType)
         editor.commit()
 
-        // If the repository contains a type
-      } else if (// If the current type is "moving"
-                 isMoving(activityType)         &&
-                 // The activity has changed from the previous activity
-                 activityChanged(activityType)  &&
-                 // The confidence level for the current activity is > 50%
-                 (confidence >= 50)) {
+        // And push to database
+        // TODO
+      }
 
-            // Notify the user
-            sendNotification
+      var previousActivityType: Int = prefs.getInt(KEY_PREVIOUS_ACTIVITY_TYPE,
+        DetectedActivity.UNKNOWN)
+
+      // Activity changed
+      if (previousActivityType != currentActivityType) {
+        if (isMoving(previousActivityType) && !isMoving(currentActivityType)) {
+          // TODO Start location updates intent
+        } else if (!isMoving(previousActivityType) && isMoving(currentActivityType)) {
+          // TODO Stop location updates intent
+        }
       }
     }
   }
@@ -146,28 +134,6 @@ class ActivityRecognitionIntentService
   }
 
   /**
-    * Tests to see if the activity has changed
-    *
-    * @param currentType The current activity type
-    * @return true if the user's current activity is different from the previous most probable
-    * activity otherwise, false.
-    */
-  def activityChanged(currentType: Int): Boolean = {
-    // Get the previous type, otherwise return the "unknown" type
-    var previousType: Int = prefs.getInt(
-      ActivityUtils.KEY_PREVIOUS_ACTIVITY_TYPE,
-      DetectedActivity.UNKNOWN)
-
-    // If the previous type isn't the same as the current type, the activity has changed
-    return if (previousType != currentType) {
-      true
-      // Otherwise, it hasn't.
-    } else {
-      false
-    }
-  }
-
-  /**
     * Determine if an activity means that the user is moving.
     *
     * @param type The type of activity the user is doing (see DetectedActivity constants)
@@ -177,31 +143,6 @@ class ActivityRecognitionIntentService
     // These types mean that the user is probably not moving
     case DetectedActivity.STILL | DetectedActivity.TILTING | DetectedActivity.UNKNOWN => false
     case _ => true
-  }
-
-  /**
-    * Write the activity recognition update to the log file
-    *
-    * @param result The result extracted from the incoming Intent
-    */
-  def logActivityRecognitionResult(result: ActivityRecognitionResult) {
-    // Get all the probably activities from the updated result
-    for (detectedActivity: DetectedActivity <- result.getProbableActivities().asInstanceOf[List[DetectedActivity]]) {
-
-      // Get the activity type, confidence level, and human-readable name
-      var activityType: Int    = detectedActivity.getType()
-      var confidence:   Int    = detectedActivity.getConfidence()
-      var activityName: String = getNameFromType(activityType)
-
-      // Make a timestamp
-      var timeStamp: String    = dateFormat.format(new Date())
-
-      // Get the current log file or create a new one, then log the activity
-      LogFile.getInstance(getApplicationContext).log(
-        timeStamp + ";;" +
-        s"Log: timestamp: ${activityType} type ${activityName} confidence ${confidence}"
-      )
-    }
   }
 
   /**

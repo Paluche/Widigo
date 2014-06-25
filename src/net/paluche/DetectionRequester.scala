@@ -46,6 +46,7 @@ import macroid.FullDsl._
   */
 class DetectionRequester(var context: Context) extends ConnectionCallbacks
     with OnConnectionFailedListener {
+  import WidigoUtils._
 
   // Stores the PendingIntent used to send activity recognition events back to the app
   var activityRecognitionPendingIntent: PendingIntent = null
@@ -87,7 +88,7 @@ class DetectionRequester(var context: Context) extends ConnectionCallbacks
      * The PendingIntent sends updates to ActivityRecognitionIntentService
      */
     getActivityRecognitionClient().requestActivityUpdates(
-      ActivityUtils.DETECTION_INTERVAL_MILLISECONDS,
+      DETECTION_INTERVAL_MILLISECONDS,
       createRequestPendingIntent())
 
     // Disconnect the client
@@ -202,7 +203,7 @@ class DetectionRequester(var context: Context) extends ConnectionCallbacks
 
       try {
         connectionResult.startResolutionForResult(context.asInstanceOf[Activity],
-          ActivityUtils.CONNECTION_FAILURE_RESOLUTION_REQUEST)
+          CONNECTION_FAILURE_RESOLUTION_REQUEST)
 
         /*
          * Thrown if Google Play services canceled the original
@@ -222,7 +223,7 @@ class DetectionRequester(var context: Context) extends ConnectionCallbacks
       var dialog: Dialog = GooglePlayServicesUtil.getErrorDialog(
         connectionResult.getErrorCode(),
         context.asInstanceOf[Activity],
-        ActivityUtils.CONNECTION_FAILURE_RESOLUTION_REQUEST)
+        CONNECTION_FAILURE_RESOLUTION_REQUEST)
       if (dialog != null) {
         dialog.show()
       }

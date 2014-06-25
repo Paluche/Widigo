@@ -33,6 +33,7 @@ class TrackingOptionActivity extends Activity
 with Contexts[Activity]
 with IdGeneration {
   import Options._
+  import WidigoUtils._
 
   var trackingOnSwitch:  Switch   = null
   var stillCheckBox:     CheckBox = null
@@ -91,62 +92,56 @@ with IdGeneration {
   def getTrackingOption(): TrackingOption = {
     if (prefs == null)
       prefs = getApplicationContext.getSharedPreferences(
-      ActivityUtils.SHARED_PREFERENCES,
+      SHARED_PREFERENCES,
       Context.MODE_PRIVATE)
 
     // Check if the Keys exist
-    if ((!prefs.contains(ActivityUtils.KEY_TRACKING_ON))        ||
-      (!prefs.contains(ActivityUtils.KEY_TRACKING_STILL))       ||
-      (!prefs.contains(ActivityUtils.KEY_TRACKING_WALKING))     ||
-      (!prefs.contains(ActivityUtils.KEY_TRACKING_RUNNING))     ||
-      (!prefs.contains(ActivityUtils.KEY_TRACKING_IN_VEHICULE)) ||
-      (!prefs.contains(ActivityUtils.KEY_TRACKING_ON_BICYCLE))) {
+    if ((!prefs.contains(KEY_TRACKING_ON))        ||
+      (!prefs.contains(KEY_TRACKING_STILL))       ||
+      (!prefs.contains(KEY_TRACKING_WALKING))     ||
+      (!prefs.contains(KEY_TRACKING_RUNNING))     ||
+      (!prefs.contains(KEY_TRACKING_IN_VEHICULE)) ||
+      (!prefs.contains(KEY_TRACKING_ON_BICYCLE))) {
       var editor: Editor = prefs.edit()
 
-      if (!prefs.contains(ActivityUtils.KEY_TRACKING_ON))
-        editor.putBoolean(ActivityUtils.KEY_TRACKING_ON, false)
+      if (!prefs.contains(KEY_TRACKING_ON))
+        editor.putBoolean(KEY_TRACKING_ON, false)
 
-      if (!prefs.contains(ActivityUtils.KEY_TRACKING_STILL))
-        editor.putBoolean(ActivityUtils.KEY_TRACKING_STILL, true)
+      if (!prefs.contains(KEY_TRACKING_STILL))
+        editor.putBoolean(KEY_TRACKING_STILL, true)
 
-      if (!prefs.contains(ActivityUtils.KEY_TRACKING_WALKING))
-        editor.putBoolean(ActivityUtils.KEY_TRACKING_WALKING, true)
+      if (!prefs.contains(KEY_TRACKING_WALKING))
+        editor.putBoolean(KEY_TRACKING_WALKING, true)
 
-      if (!prefs.contains(ActivityUtils.KEY_TRACKING_RUNNING))
-        editor.putBoolean(ActivityUtils.KEY_TRACKING_RUNNING, true)
+      if (!prefs.contains(KEY_TRACKING_RUNNING))
+        editor.putBoolean(KEY_TRACKING_RUNNING, true)
 
-      if (!prefs.contains(ActivityUtils.KEY_TRACKING_IN_VEHICULE))
-        editor.putBoolean(ActivityUtils.KEY_TRACKING_IN_VEHICULE, true)
+      if (!prefs.contains(KEY_TRACKING_IN_VEHICULE))
+        editor.putBoolean(KEY_TRACKING_IN_VEHICULE, true)
 
-      if (!prefs.contains(ActivityUtils.KEY_TRACKING_ON_BICYCLE))
-        editor.putBoolean(ActivityUtils.KEY_TRACKING_ON_BICYCLE, true)
+      if (!prefs.contains(KEY_TRACKING_ON_BICYCLE))
+        editor.putBoolean(KEY_TRACKING_ON_BICYCLE, true)
 
       editor.commit()
     }
 
     new TrackingOption(
-      prefs.getBoolean(ActivityUtils.KEY_TRACKING_ON, false),
-      prefs.getBoolean(ActivityUtils.KEY_TRACKING_STILL, false),
-      prefs.getBoolean(ActivityUtils.KEY_TRACKING_WALKING, false),
-      prefs.getBoolean(ActivityUtils.KEY_TRACKING_RUNNING, false),
-      prefs.getBoolean(ActivityUtils.KEY_TRACKING_IN_VEHICULE, false),
-      prefs.getBoolean(ActivityUtils.KEY_TRACKING_ON_BICYCLE, false))
+      prefs.getBoolean(KEY_TRACKING_ON, false),
+      prefs.getBoolean(KEY_TRACKING_STILL, false),
+      prefs.getBoolean(KEY_TRACKING_WALKING, false),
+      prefs.getBoolean(KEY_TRACKING_RUNNING, false),
+      prefs.getBoolean(KEY_TRACKING_IN_VEHICULE, false),
+      prefs.getBoolean(KEY_TRACKING_ON_BICYCLE, false))
   }
 
   lazy val saveTrackingOption = {
     var editor: Editor = prefs.edit()
-    editor.putBoolean(ActivityUtils.KEY_TRACKING_ON,
-      trackingOnSwitch.isChecked)
-    editor.putBoolean(ActivityUtils.KEY_TRACKING_STILL,
-      stillCheckBox.isChecked)
-    editor.putBoolean(ActivityUtils.KEY_TRACKING_WALKING,
-      walkingCheckBox.isChecked)
-    editor.putBoolean(ActivityUtils.KEY_TRACKING_RUNNING,
-      runningCheckBox.isChecked)
-    editor.putBoolean(ActivityUtils.KEY_TRACKING_IN_VEHICULE,
-      inVehicleCheckBox.isChecked)
-    editor.putBoolean(ActivityUtils.KEY_TRACKING_ON_BICYCLE,
-      onBicycleCheckBox.isChecked)
+    editor.putBoolean(KEY_TRACKING_ON, trackingOnSwitch.isChecked)
+    editor.putBoolean(KEY_TRACKING_STILL, stillCheckBox.isChecked)
+    editor.putBoolean(KEY_TRACKING_WALKING, walkingCheckBox.isChecked)
+    editor.putBoolean(KEY_TRACKING_RUNNING, runningCheckBox.isChecked)
+    editor.putBoolean(KEY_TRACKING_IN_VEHICULE, inVehicleCheckBox.isChecked)
+    editor.putBoolean(KEY_TRACKING_ON_BICYCLE, onBicycleCheckBox.isChecked)
     editor.commit()
   }
 }
@@ -157,6 +152,7 @@ class MyTracksOptionActivity extends Activity
 with Contexts[Activity]
 with IdGeneration {
   import Options._
+  import WidigoUtils._
 
   var startDateButton: Button = null
   var stopDateButton: Button  = null
@@ -209,37 +205,41 @@ with IdGeneration {
     }
 
     // Get the preferences.
+    if (prefs == null)
+      prefs = getApplicationContext.getSharedPreferences(
+      SHARED_PREFERENCES,
+      Context.MODE_PRIVATE)
     var myTracksOption: MyTracksOption = getMyTracksOption()
 
     dateFormat.applyPattern("yyyy-MM-dd")
-    startDateButton.setText(dateFormat.format(new Date(myTracksOption.startDate)))
-    stopDateButton.setText(dateFormat.format(new Date(myTracksOption.stopDate)))
+    startDateButton.setText(dateFormat.format(new Date(myTracksOption.startDate * 1000)))
+    stopDateButton.setText(dateFormat.format(new Date(myTracksOption.stopDate * 1000)))
   }
 
   def getMyTracksOption(): MyTracksOption = {
     // Check if the Keys exist
-    if ((!prefs.contains(ActivityUtils.KEY_MY_TRACKS_START_DATE)) ||
-      (!prefs.contains(ActivityUtils.KEY_MY_TRACKS_STOP_DATE))) {
+    if ((!prefs.contains(KEY_MY_TRACKS_START_DATE)) ||
+      (!prefs.contains(KEY_MY_TRACKS_STOP_DATE))) {
       var editor: Editor = prefs.edit()
 
-      if (!prefs.contains(ActivityUtils.KEY_MY_TRACKS_START_DATE))
+      if (!prefs.contains(KEY_MY_TRACKS_START_DATE))
         // Default: January 1, 2014
-        editor.putLong(ActivityUtils.KEY_MY_TRACKS_START_DATE, 1388530800)
+        editor.putLong(KEY_MY_TRACKS_START_DATE, 1388530800)
 
-      if (!prefs.contains(ActivityUtils.KEY_MY_TRACKS_STOP_DATE))
+      if (!prefs.contains(KEY_MY_TRACKS_STOP_DATE))
         // Default: invalid value to keep the stop at the current day.
-        editor.putLong(ActivityUtils.KEY_MY_TRACKS_STOP_DATE, -1)
+        editor.putLong(KEY_MY_TRACKS_STOP_DATE, -1)
 
       editor.commit()
     }
 
-    var stopDate: Long = prefs.getLong(ActivityUtils.KEY_MY_TRACKS_STOP_DATE,
+    var stopDate: Long = prefs.getLong(KEY_MY_TRACKS_STOP_DATE,
       -1)
 
     if (stopDate == -1)
-      stopDate = (new Date).getTime()
+      stopDate = (new Date).getTime()/1000
 
-    new MyTracksOption(prefs.getLong(ActivityUtils.KEY_MY_TRACKS_START_DATE,
+    new MyTracksOption(prefs.getLong(KEY_MY_TRACKS_START_DATE,
       1388530800), stopDate)
   }
 
@@ -258,7 +258,7 @@ with IdGeneration {
     }
 
     // Update display
-    startDateButton.setText(dateFormat.format(new Date(myTracksOption.startDate)))
-    stopDateButton.setText(dateFormat.format(new Date(myTracksOption.stopDate)))
+    startDateButton.setText(dateFormat.format(new Date(myTracksOption.startDate * 1000)))
+    stopDateButton.setText(dateFormat.format(new Date(myTracksOption.stopDate * 1000)))
   }
 }

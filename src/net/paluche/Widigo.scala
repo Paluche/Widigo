@@ -48,14 +48,13 @@ import com.google.android.gms.maps.model.LatLng
 
 import java.io.IOException
 
-object Widigo {
+class Widigo extends Activity with Contexts[Activity]
+    with LocationListener
+    with GooglePlayServicesClient.ConnectionCallbacks
+    with GooglePlayServicesClient.OnConnectionFailedListener
+    with IdGeneration {
 
-  // Constants
-  val UPDATE_INTERVAL_IN_MILLISECONDS       = 60000
-  val FAST_INTERVAL_CEILING_IN_MILLISECONDS = 1000
-
-  // Display variables
-  var status: String = "???"
+  import WidigoUtils._
 
   // Intent for activity recognition needs
   var broadcastFilter:            IntentFilter          = null
@@ -63,30 +62,14 @@ object Widigo {
   private var detectionRequester: DetectionRequester    = null
   private var detectionRemover:   DetectionRemover      = null
 
-  // RequstType
   var requestType = -1
 
-  var logFile: LogFile = null
-}
-
-class Widigo extends Activity with Contexts[Activity]
-    with LocationListener
-    with GooglePlayServicesClient.ConnectionCallbacks
-    with GooglePlayServicesClient.OnConnectionFailedListener
-    with IdGeneration {
-//    with ActionBarActivity {
-
-  import Widigo._
-
-  /*
-   * Local variables
-   */
   // Location
   var locationRequest:  LocationRequest  = null
   var locationClient:   LocationClient   = null
   var locationUpdatesResquested: Boolean = false
 
-  // Layout
+  // Layout variables
   var map: GoogleMap = null
 
   // Local position marker
@@ -103,6 +86,7 @@ class Widigo extends Activity with Contexts[Activity]
   lazy val myTracksOptionButton = {
     var intent: Intent = new Intent(this, classOf[MyTracksOptionActivity])
     startActivity(intent)
+
   }
 
   // Layout
@@ -164,7 +148,7 @@ class Widigo extends Activity with Contexts[Activity]
     }
 
     // Start the requests for activity recognition updates.
-    //requestType = ActivityUtils.REQUEST_TYPE_ADD_UPDATES
+    //requestType = REQUEST_TYPE_ADD_UPDATES
     //detectionRequester.requestUpdates
   }
 
@@ -178,6 +162,10 @@ class Widigo extends Activity with Contexts[Activity]
   // Register the broadcast receiver and update the log of activity updates
   override def onResume() {
     super.onResume();
+
+    // TODO
+    // Get the preferences and start/continue/stop the Activity Intent if
+    // tracking Switch status has changed.
 
     //// Register the broadcast receiver
     //broadcastManager.registerReceiver(
@@ -233,7 +221,7 @@ class Widigo extends Activity with Contexts[Activity]
   override def onConnectionFailed(connectionResult: ConnectionResult) {
     if (connectionResult.hasResolution) {
       connectionResult.startResolutionForResult(this,
-        ActivityUtils.CONNECTION_FAILURE_RESOLUTION_REQUEST)
+        CONNECTION_FAILURE_RESOLUTION_REQUEST)
     }
   }
 
@@ -249,12 +237,11 @@ class Widigo extends Activity with Contexts[Activity]
    * Other functions
    */
   def servicesConnected: Boolean = {
-    requestType = ActivityUtils.REQUEST_TYPE_CONNECT_CLIENT
+    requestType = REQUEST_TYPE_CONNECT_CLIENT
     var resultCode: Int = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this)
 
     if (resultCode == ConnectionResult.SUCCESS) {
-      status = "Google Play services is available"
-      logD"${status}"
+      logD"Google Play services is available"
       return true
     } else {
       // Display an error dialog
@@ -265,24 +252,20 @@ class Widigo extends Activity with Contexts[Activity]
 
   // Handle results returned to the FragmentActivity by Google Play Services
   override def onActivityResult(requestCode: Int, resultCode: Int, data: Intent) = {
-    if (requestCode == ActivityUtils.CONNECTION_FAILURE_RESOLUTION_REQUEST) {
+    if (requestCode == CONNECTION_FAILURE_RESOLUTION_REQUEST) {
       if (resultCode == Activity.RESULT_OK) {
         requestType match {
-          case ActivityUtils.REQUEST_TYPE_CONNECT_CLIENT => {
-            status = "Error resolved, please re-try operation"
-            logD"${status}"
+          case REQUEST_TYPE_CONNECT_CLIENT => {
+            logD"Error resolved, please re-try operation"
           }
 
-          case ActivityUtils.REQUEST_TYPE_ADD_UPDATES =>
+          case REQUEST_TYPE_ADD_UPDATES =>
           detectionRequester.requestUpdates()
 
-          case ActivityUtils.REQUEST_TYPE_REMOVE_UPDATES =>
+          case REQUEST_TYPE_REMOVE_UPDATES =>
           detectionRemover.removeUpdates(detectionRequester.getRequestPendingIntent)
 
-          case _ => {
-            status = "Unable to resolve"
-            logD"${status}"
-          }
+          case _ => logD"Unable to resolve"
         }
       }
     } else {
@@ -340,8 +323,8 @@ class Widigo extends Activity with Contexts[Activity]
    broadcastManager = LocalBroadcastManager.getInstance(this)
 
    // Create a new Intent filter for the broadcast receiver
-   broadcastFilter = new IntentFilter(ActivityUtils.ACTION_REFRESH_STATUS_LIST)
-   broadcastFilter.addCategory(ActivityUtils.CATEGORY_LOCATION_SERVICES);
+   broadcastFilter = new IntentFilter(ACTION_REFRESH_STATUS_LIST)
+   broadcastFilter.addCategory(CATEGORY_LOCATION_SERVICES);
 
    // Get detection requester and remover objects
    detectionRequester = new DetectionRequester(this)
