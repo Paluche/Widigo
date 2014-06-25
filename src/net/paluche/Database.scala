@@ -12,31 +12,11 @@ import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 
 
+class Activity(val polylineOptions: PolylineOptions,
+               val activityID: Int,
+               val activityType: Int,
+               val pointList: List[ActivityPoint] )
 
-object ActivityHAndler {
-  def isMoving(activityType: Int): Boolean = activityType match {
-    // These types mean that the user is probably not moving
-    case DetectedActivity.STILL | DetectedActivity.TILTING | DetectedActivity.UNKNOWN => false
-    case _ => true
-  }
-
-  def getNameFromType(activityType: Int): String = activityType match {
-    case DetectedActivity.IN_VEHICLE => "in_vehicle"
-    case DetectedActivity.ON_BICYCLE => "on_bicycle"
-    case DetectedActivity.ON_FOOT    => "on_foot"
-    case DetectedActivity.STILL      => "still"
-    case DetectedActivity.UNKNOWN    => "unknown"
-    case DetectedActivity.TILTING    => "tilting"
-    case _                           => "unknown"
-  }
-}
-
-// Data format for the SQL base
-
-// Activity format in the SQLite base.
-// We will save a list of points, each point belong to an activity number and
-// an activity type. After we have the information about the location. And
-// finally the timestamp (UTC time in milliseconds since January 1, 1970).
 class ActivityPoint (val timestamp: Long,
                      val latitude: Double,
                      val longitude: Double,
@@ -44,11 +24,6 @@ class ActivityPoint (val timestamp: Long,
                      val altitude: Double,
                      val hasSpeed: Boolean,
                      val speed: Float)
-
-class Activity(val polylineOptions: PolylineOptions,
-               val activityID: Int,
-               val activityType: Int,
-               val pointList: List[ActivityPoint] )
 
 class DbHelper(context: Context) extends
     SQLiteOpenHelper(context, "Widigo.db", null, 1) {
@@ -82,11 +57,6 @@ class DbHelper(context: Context) extends
     columnNameActivityType, columnNameActivityID, columnNameLatitude,
     columnNameLongitude, columnNameAltitude, columnNameSpeed)
 
-  /*
-   * Option Table
-   */
-  // TODO
-
   // SQLite helpers
   val intType:                String = " INTEGER"
   val realType:               String = " REAL"
@@ -111,7 +81,6 @@ class DbHelper(context: Context) extends
   /*
    * Add data
    */
-
   def addActivityEntry(activityPoint: ActivityPoint, activityType: Integer,
       activityID: Integer): Long = {
     val db: SQLiteDatabase = this.getWritableDatabase();
@@ -150,22 +119,7 @@ class DbHelper(context: Context) extends
       cursor.getFloat(columnIndexSpeed))
   }
 
-  private def getLastActivitPoint(): ActivityPoint = {
-    val db: SQLiteDatabase  = this.getReadableDatabase();
-
-    var cursor: Cursor = db.query(
-      tableName,
-      projection,
-      columnNameTimestamp,
-      Array("MAX"), // FIXME I don't konw the correct syntax
-      null,
-      null,
-      null)
-
-    extractActivityPoint(cursor)
-  }
-
-  // Timestammp arguments are the UTC time in milliseconds since January 1, 1970
+  // Timestamp arguments are the UTC time in milliseconds since January 1, 1970
   private def getActivitiesDataByDate(startTimestamp: Long,
       endTimestamp: Long): Cursor = {
     val db: SQLiteDatabase  = this.getReadableDatabase();
@@ -236,22 +190,4 @@ class DbHelper(context: Context) extends
       columnNameActivityID + " LIKE ?",
       Array(activityID.toString))
   }
-}
-
-/*
- * About the confidence level, if the confidence in the activity is
- *   - between 75 and 100, this is the
- */
-class ActivityHandler {
-
-  def handleActivities(list: List[DetectedActivity]) {
-
-    val confidenceMax: Int = 0
-
-    for (activity: DetectedActivity <- list ) {
-
-    }
-
-  }
-
 }

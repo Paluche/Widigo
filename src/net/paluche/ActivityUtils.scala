@@ -42,20 +42,45 @@ object ActivityUtils {
     MILLISECONDS_PER_SECOND * DETECTION_INTERVAL_SECONDS
 
   // Shared Preferences repository name
+  /*
+   * Shared Preferences keys
+   */
   val SHARED_PREFERENCES: String =
-    "com.example.android.activityrecognition.SHARED_PREFERENCES"
+    "net.paluche.widigo.SHARED_PREFERENCES"
 
   // Key in the repository for the previous activity
   val KEY_PREVIOUS_ACTIVITY_TYPE: String  =
-    "com.example.android.activityrecognition.KEY_PREVIOUS_ACTIVITY_TYPE"
+    "net.paluche.widigo.KEY_PREVIOUS_ACTIVITY_TYPE"
+
+  // Tracking preferences
+  val KEY_TRACKING_ON: String =
+    "net.paluche.widigo.KEY_TRACKING_ON"
+  val KEY_TRACKING_STILL: String =
+    "net.paluche.widigo.KEY_TRACKING_STILL"
+  val KEY_TRACKING_WALKING: String =
+    "net.paluche.widigo.KEY_TRACKING_WALKING"
+  val KEY_TRACKING_RUNNING: String =
+    "net.paluche.widigo.KEY_TRACKING_RUNNING"
+  val KEY_TRACKING_IN_VEHICULE: String =
+    "net.paluche.widigo.KEY_TRACKING_IN_VEHICULE"
+  val KEY_TRACKING_ON_BICYCLE: String =
+    "net.paluche.widigo.KEY_TRACKING_ON_BICYCLE"
+
+  // My tracks to display preferences
+  val KEY_MY_TRACKS_START_DATE: String =
+    "net.paluche.widigo.KEY_MY_TRACKS_START_DATE"
+
+  val KEY_MY_TRACKS_STOP_DATE: String =
+    "net.paluche.widigo.KEY_MY_TRACKS_STOP_DATE"
 
   // Constants for constructing the log file name
+  // TODO remove this
   val LOG_FILE_NAME_PREFIX: String = "activityrecognition"
   val LOG_FILE_NAME_SUFFIX: String = ".log"
 
   // Keys in the repository for storing the log file info
   val KEY_LOG_FILE_NUMBER: String =
-    "com.example.android.activityrecognition.KEY_LOG_FILE_NUMBER"
+    "net.paluche.widigo.KEY_LOG_FILE_NUMBER"
   val KEY_LOG_FILE_NAME: String =
-    "com.example.android.activityrecognition.KEY_LOG_FILE_NAME"
+    "net.paluche.widigo.KEY_LOG_FILE_NAME"
 }
