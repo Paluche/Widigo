@@ -55,6 +55,8 @@ object WidigoUtils {
   // Key in the repository for the previous activity
   val KEY_PREVIOUS_ACTIVITY_TYPE: String  =
     "net.paluche.widigo.KEY_PREVIOUS_ACTIVITY_TYPE"
+  val KEY_PREVIOUS_ACTIVITY_ID: String =
+    "net.paluche.widigo.KEY_PREVIOUS_ACTIVITY_ID"
 
   // Tracking preferences
   val KEY_TRACKING_ON: String =

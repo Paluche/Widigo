@@ -108,6 +108,20 @@ class DbHelper(context: Context) extends
   /*
    * Getting data from the database
    */
+
+  private def getLastActivitPoint(): ActivityPoint = {
+    val db: SQLiteDatabase  = this.getReadableDatabase();
+    var cursor: Cursor = db.query(
+      tableName,
+      projection,
+      columnNameTimestamp,
+      Array("MAX"), // FIXME I don't konw the correct syntax
+      null,
+      null,
+      null)
+
+    extractActivityPoint(cursor)
+  }
   private def extractActivityPoint(cursor: Cursor) = {
     new ActivityPoint(
       cursor.getLong(columnIndexTimestamp),
