@@ -1,44 +1,38 @@
 package net.paluche.widigo
 
 import macroid._
-import macroid.FullDsl._
 import macroid.contrib.Layouts._
+import macroid.FullDsl._
 import macroid.util.Ui
 
 import android.app.Activity
 import android.app.ActionBar
-import android.widget.{Switch, TextView, CheckBox, Button, DatePicker}
+import android.content.Context
+import android.content.SharedPreferences
+import android.content.SharedPreferences.Editor
 import android.os.Bundle
+import android.widget.{Switch, TextView, CheckBox, Button, DatePicker}
 
 import java.text.DateFormat
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.GregorianCalendar
-import java.util.Calendar
 
 import scala.util.control._
+
+object Options {
+  var prefs: SharedPreferences = null
+}
 
 class TrackingOption(var trackingOn: Boolean, var trackingStill: Boolean,
   var trackingWalking: Boolean, var trackingRunning: Boolean,
   var trackingInVehicle: Boolean, var trackingOnBicycle : Boolean)
 
-// For tests
-object OptionTest {
-  var trackingOn:        Boolean = false
-  var trackingStill:     Boolean = true
-  var trackingWalking:   Boolean = true
-  var trackingRunning:   Boolean = true
-  var trackingInVehicle: Boolean = true
-  var trackingOnBicycle: Boolean = true
-
-  var startDate: Long = (new Date(114, 0, 1)).getTime//(new GregorianCalendar(14, 1, 1)).getGregorianChange.getTime
-  var stopDate: Long = (new Date()).getTime()
-}
-
 class TrackingOptionActivity extends Activity
 with Contexts[Activity]
 with IdGeneration {
-  import OptionTest._
+  import Options._
 
   var trackingOnSwitch:  Switch   = null
   var stillCheckBox:     CheckBox = null
@@ -50,11 +44,11 @@ with IdGeneration {
   lazy val trackingOptionLayout = l[VerticalLinearLayout](
     w[Switch]   <~ id(Id.trackingOnSwitch) <~ text("Tracking On"),
     w[TextView] <~ text("\n  Specify Activities"),
-    w[CheckBox] <~ id(Id.stillCheckBox)     <~ text("Still")      <~ On.click(saveTrackingOption),
-    w[CheckBox] <~ id(Id.walkingCheckBox)   <~ text("Walking")    <~ On.click(saveTrackingOption),
-    w[CheckBox] <~ id(Id.runningCheckBox)   <~ text("Running")    <~ On.click(saveTrackingOption),
-    w[CheckBox] <~ id(Id.inVehicleCheckBox) <~ text("In vehicle") <~ On.click(saveTrackingOption),
-    w[CheckBox] <~ id(Id.onBicycleCheckBox) <~ text("On bicycle") <~ On.click(saveTrackingOption))
+    w[CheckBox] <~ id(Id.stillCheckBox)     <~ text("Still"),
+    w[CheckBox] <~ id(Id.walkingCheckBox)   <~ text("Walking"),
+    w[CheckBox] <~ id(Id.runningCheckBox)   <~ text("Running"),
+    w[CheckBox] <~ id(Id.inVehicleCheckBox) <~ text("In vehicle"),
+    w[CheckBox] <~ id(Id.onBicycleCheckBox) <~ text("On bicycle"))
 
   override def onCreate(b: Bundle) {
     super.onCreate(b)
@@ -94,30 +88,75 @@ with IdGeneration {
   // FIXME The end of the class is designed for tests. The final
   // implementation is to be done.
   // TODO get the preferences
-  def getTrackingOption(): TrackingOption = new TrackingOption(
-    trackingOn, trackingStill, trackingWalking, trackingRunning,
-    trackingInVehicle, trackingOnBicycle)
+  def getTrackingOption(): TrackingOption = {
+    if (prefs == null)
+      prefs = getApplicationContext.getSharedPreferences(
+      ActivityUtils.SHARED_PREFERENCES,
+      Context.MODE_PRIVATE)
+
+    // Check if the Keys exist
+    if ((!prefs.contains(ActivityUtils.KEY_TRACKING_ON))        ||
+      (!prefs.contains(ActivityUtils.KEY_TRACKING_STILL))       ||
+      (!prefs.contains(ActivityUtils.KEY_TRACKING_WALKING))     ||
+      (!prefs.contains(ActivityUtils.KEY_TRACKING_RUNNING))     ||
+      (!prefs.contains(ActivityUtils.KEY_TRACKING_IN_VEHICULE)) ||
+      (!prefs.contains(ActivityUtils.KEY_TRACKING_ON_BICYCLE))) {
+      var editor: Editor = prefs.edit()
+
+      if (!prefs.contains(ActivityUtils.KEY_TRACKING_ON))
+        editor.putBoolean(ActivityUtils.KEY_TRACKING_ON, false)
+
+      if (!prefs.contains(ActivityUtils.KEY_TRACKING_STILL))
+        editor.putBoolean(ActivityUtils.KEY_TRACKING_STILL, true)
+
+      if (!prefs.contains(ActivityUtils.KEY_TRACKING_WALKING))
+        editor.putBoolean(ActivityUtils.KEY_TRACKING_WALKING, true)
+
+      if (!prefs.contains(ActivityUtils.KEY_TRACKING_RUNNING))
+        editor.putBoolean(ActivityUtils.KEY_TRACKING_RUNNING, true)
+
+      if (!prefs.contains(ActivityUtils.KEY_TRACKING_IN_VEHICULE))
+        editor.putBoolean(ActivityUtils.KEY_TRACKING_IN_VEHICULE, true)
+
+      if (!prefs.contains(ActivityUtils.KEY_TRACKING_ON_BICYCLE))
+        editor.putBoolean(ActivityUtils.KEY_TRACKING_ON_BICYCLE, true)
+
+      editor.commit()
+    }
+
+    new TrackingOption(
+      prefs.getBoolean(ActivityUtils.KEY_TRACKING_ON, false),
+      prefs.getBoolean(ActivityUtils.KEY_TRACKING_STILL, false),
+      prefs.getBoolean(ActivityUtils.KEY_TRACKING_WALKING, false),
+      prefs.getBoolean(ActivityUtils.KEY_TRACKING_RUNNING, false),
+      prefs.getBoolean(ActivityUtils.KEY_TRACKING_IN_VEHICULE, false),
+      prefs.getBoolean(ActivityUtils.KEY_TRACKING_ON_BICYCLE, false))
+  }
 
   lazy val saveTrackingOption = {
-    //  TrackingOption = new TrackingOption(trackingOnSwitch.isChecked,
-    //    stillCheckBox.isChecked, walkingCheckBox.isChecked,
-    //    runningCheckBox.isChecked, inVehicleCheckBox.isChecked,
-    //    onBicycleCheckBox.isChecked)
-    // TODO save in preferences
-    trackingOn        = trackingOnSwitch.isChecked
-    trackingStill     = stillCheckBox.isChecked
-    trackingWalking   = walkingCheckBox.isChecked
-    trackingRunning   = runningCheckBox.isChecked
-    trackingInVehicle = inVehicleCheckBox.isChecked
-    trackingOnBicycle = onBicycleCheckBox.isChecked
-    toast("Tracking options saved") <~ fry
+    var editor: Editor = prefs.edit()
+    editor.putBoolean(ActivityUtils.KEY_TRACKING_ON,
+      trackingOnSwitch.isChecked)
+    editor.putBoolean(ActivityUtils.KEY_TRACKING_STILL,
+      stillCheckBox.isChecked)
+    editor.putBoolean(ActivityUtils.KEY_TRACKING_WALKING,
+      walkingCheckBox.isChecked)
+    editor.putBoolean(ActivityUtils.KEY_TRACKING_RUNNING,
+      runningCheckBox.isChecked)
+    editor.putBoolean(ActivityUtils.KEY_TRACKING_IN_VEHICULE,
+      inVehicleCheckBox.isChecked)
+    editor.putBoolean(ActivityUtils.KEY_TRACKING_ON_BICYCLE,
+      onBicycleCheckBox.isChecked)
+    editor.commit()
   }
 }
+
+class MyTracksOption(var startDate: Long, var stopDate: Long)
 
 class MyTracksOptionActivity extends Activity
 with Contexts[Activity]
 with IdGeneration {
-  import OptionTest._
+  import Options._
 
   var startDateButton: Button = null
   var stopDateButton: Button  = null
@@ -129,25 +168,26 @@ with IdGeneration {
 
   def startDateButtonClick: Ui[Any] = {
     var start = Calendar.getInstance()
-    start.setTimeInMillis(startDate)
+
+    var myTracksOption: MyTracksOption = getMyTracksOption()
+    start.setTimeInMillis(myTracksOption.startDate)
 
     dateDialogLayout.get.asInstanceOf[DatePicker].init(start.get(Calendar.YEAR),
       start.get(Calendar.MONTH), start.get(Calendar.DATE), null)
 
     dialog(dateDialogLayout) <~ title("Start date") <~
-      positiveYes(Ui(saveMyTracksOption(Id.startDatePickerDialog))) <~ speak
+    positiveYes(Ui(saveMyTracksOption(Id.startDatePickerDialog))) <~ speak
   }
 
   lazy val stopDatePickerDialog = dialog(w[DatePicker] <~
     id(Id.stopDatePicker)) <~ title("Stop date") <~
-    positiveYes(Ui(saveMyTracksOption(Id.stopDatePickerDialog))) <~ speak
+  positiveYes(Ui(saveMyTracksOption(Id.stopDatePickerDialog))) <~ speak
 
   lazy val myTracksOptionLayout = l[VerticalLinearLayout](
-      w[TextView] <~ text("Start Date:"),
-      w[Button]   <~ id(Id.startDateButton) <~ On.click(startDateButtonClick),
-      w[TextView] <~ text("\nStop Date:"),
-      w[Button]   <~ id(Id.stopDateButton) <~ On.click(stopDatePickerDialog)
-    )
+    w[TextView] <~ text("Start Date:"),
+    w[Button]   <~ id(Id.startDateButton) <~ On.click(startDateButtonClick),
+    w[TextView] <~ text("\nStop Date:"),
+    w[Button]   <~ id(Id.stopDateButton) <~ On.click(stopDatePickerDialog))
 
   override def onCreate(b: Bundle) {
     super.onCreate(b)
@@ -162,31 +202,63 @@ with IdGeneration {
     startDateButton = findViewById(Id.startDateButton).asInstanceOf[Button]
     stopDateButton  = findViewById(Id.stopDateButton).asInstanceOf[Button]
     // Set the date slot to the saved date from preferences.
-    // TODO get the preferences.
     try {
       dateFormat = DateFormat.getDateTimeInstance().asInstanceOf[SimpleDateFormat]
     } catch {
       case NonFatal(exc) => logE"Internat error: date formatting exeption."
     }
 
+    // Get the preferences.
+    var myTracksOption: MyTracksOption = getMyTracksOption()
+
     dateFormat.applyPattern("yyyy-MM-dd")
-    startDateButton.setText(dateFormat.format(new Date(startDate)))
-    stopDateButton.setText(dateFormat.format(new Date(stopDate)))
+    startDateButton.setText(dateFormat.format(new Date(myTracksOption.startDate)))
+    stopDateButton.setText(dateFormat.format(new Date(myTracksOption.stopDate)))
+  }
+
+  def getMyTracksOption(): MyTracksOption = {
+    // Check if the Keys exist
+    if ((!prefs.contains(ActivityUtils.KEY_MY_TRACKS_START_DATE)) ||
+      (!prefs.contains(ActivityUtils.KEY_MY_TRACKS_STOP_DATE))) {
+      var editor: Editor = prefs.edit()
+
+      if (!prefs.contains(ActivityUtils.KEY_MY_TRACKS_START_DATE))
+        // Default: January 1, 2014
+        editor.putLong(ActivityUtils.KEY_MY_TRACKS_START_DATE, 1388530800)
+
+      if (!prefs.contains(ActivityUtils.KEY_MY_TRACKS_STOP_DATE))
+        // Default: invalid value to keep the stop at the current day.
+        editor.putLong(ActivityUtils.KEY_MY_TRACKS_STOP_DATE, -1)
+
+      editor.commit()
+    }
+
+    var stopDate: Long = prefs.getLong(ActivityUtils.KEY_MY_TRACKS_STOP_DATE,
+      -1)
+
+    if (stopDate == -1)
+      stopDate = (new Date).getTime()
+
+    new MyTracksOption(prefs.getLong(ActivityUtils.KEY_MY_TRACKS_START_DATE,
+      1388530800), stopDate)
   }
 
   def saveMyTracksOption(datePickerId: Int) {
-    // TODO retrieve dates preferences
+    var myTracksOption: MyTracksOption = getMyTracksOption()
+
     // Update date preferences
     if (datePickerId == Id.startDatePicker) {
-      startDate = (new GregorianCalendar(datePicker.getYear, datePicker.getMonth,
+      myTracksOption.startDate = (new GregorianCalendar(datePicker.getYear,
+        datePicker.getMonth,
         datePicker.getDayOfMonth)).getGregorianChange.getTime
     } else if (datePickerId == Id.stopDatePicker) {
-      stopDate = (new GregorianCalendar(datePicker.getYear, datePicker.getMonth,
+      myTracksOption.stopDate = (new GregorianCalendar(datePicker.getYear,
+        datePicker.getMonth,
         datePicker.getDayOfMonth)).getGregorianChange.getTime
     }
 
     // Update display
-    startDateButton.setText(dateFormat.format(new Date(startDate)))
-    stopDateButton.setText(dateFormat.format(new Date(stopDate)))
+    startDateButton.setText(dateFormat.format(new Date(myTracksOption.startDate)))
+    stopDateButton.setText(dateFormat.format(new Date(myTracksOption.stopDate)))
   }
 }
