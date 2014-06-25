@@ -65,9 +65,9 @@ class Widigo extends Activity with Contexts[Activity]
   var requestType = -1
 
   // Location
-  var locationRequest:  LocationRequest  = null
-  var locationClient:   LocationClient   = null
-  var locationUpdatesResquested: Boolean = false
+  var locationRequest:  LocationRequest = null
+  var locationClient:   LocationClient  = null
+  var locationUpdatesRequested: Boolean = false
 
   // Layout variables
   var map: GoogleMap = null
@@ -113,11 +113,7 @@ class Widigo extends Activity with Contexts[Activity]
 
     // Set the update interval
     locationRequest.setInterval(UPDATE_INTERVAL_IN_MILLISECONDS)
-
-    // Use high accuracy
     locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-
-    // Set the interval ceiling to one minute
     locationRequest.setFastestInterval(FAST_INTERVAL_CEILING_IN_MILLISECONDS)
 
     // Create a new location client, using the enclosing class to
@@ -206,13 +202,13 @@ class Widigo extends Activity with Contexts[Activity]
 
     // Start Location request updates
     locationClient.requestLocationUpdates(locationRequest, this)
-    locationUpdatesResquested = true
+    locationUpdatesRequested = true
   }
 
   override def onDisconnected() {
-    if (locationUpdatesResquested)
+    if (locationUpdatesRequested)
       locationClient.removeLocationUpdates(this)
-    locationUpdatesResquested = false
+    locationUpdatesRequested = false
   }
 
   /*
@@ -377,6 +373,7 @@ class Widigo extends Activity with Contexts[Activity]
  }
 }
 */
+
 /*
  * Actually I don't want the requests to stop
 

@@ -86,9 +86,6 @@ with IdGeneration {
     super.onStop
   }
 
-  // FIXME The end of the class is designed for tests. The final
-  // implementation is to be done.
-  // TODO get the preferences
   def getTrackingOption(): TrackingOption = {
     if (prefs == null)
       prefs = getApplicationContext.getSharedPreferences(

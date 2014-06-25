@@ -20,9 +20,7 @@
  */
 package net.paluche.Widigo
 
-//import com.google.android.gms.location.LocationListener
-import com.google.android.gms.location.DetectedActivity
-import com.google.android.gms.location.ActivityRecognitionResult
+import com.google.android.gms.location._
 
 import android.app.IntentService
 import android.app.NotificationManager
@@ -31,28 +29,33 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.SharedPreferences.Editor
+import android.location.Location
+import android.os.Bundle
 import android.provider.Settings
 import android.support.v4.app.NotificationCompat
 
-import macroid.FullDsl._
+import com.google.android.gms.common.GooglePlayServicesClient.ConnectionCallbacks
 
-import java.text.DateFormat
-import java.text.SimpleDateFormat
-import java.util.Date
+import macroid.FullDsl._
 
 import scala.util.control._
 
 class ActivityRecognitionIntentService
-    extends IntentService("WidigoActivity") {
+extends IntentService("WidigoIntentService")
+with ConnectionCallbacks {
+
   import WidigoUtils._
 
-  var prefs:      SharedPreferences = null
-  var dateFormat: SimpleDateFormat  = null
+  // Preferences
+  var prefs: SharedPreferences = null
+
+  // Location
+  var locationClient: LocationClient = null
 
   override def onHandleIntent(intent: Intent) {
     // Get a handle to the repository
-    prefs = getApplicationContext.getSharedPreferences(
-              SHARED_PREFERENCES, Context.MODE_PRIVATE)
+    prefs = getApplicationContext.getSharedPreferences(SHARED_PREFERENCES,
+      Context.MODE_PRIVATE)
 
     // If the intent contains an Activity update
     if (ActivityRecognitionResult.hasResult(intent)) {
@@ -69,19 +72,28 @@ class ActivityRecognitionIntentService
       var currentActivityType: Int = currentActivity.getType()
 
       // Check to see if the repository contains a previous activity
-      if (!prefs.contains(KEY_PREVIOUS_ACTIVITY_TYPE)) {
+      if (!prefs.contains(KEY_PREVIOUS_ACTIVITY_TYPE) ||
+        !prefs.contains(KEY_PREVIOUS_ACTIVITY_ID)) {
+
         // This is the first type an activity has been detected. Store the type
+        // and initialise the ID
+        // TODO Retrieve from the database the type and ID of the last
+        // activity saved.
         var editor: Editor = prefs.edit()
         editor.putInt(KEY_PREVIOUS_ACTIVITY_TYPE, currentActivityType)
+        editor.putInt(KEY_PREVIOUS_ACTIVITY_ID,   0)
         editor.commit()
 
-        // Push to database
-        // TODO
+        // Retrieve the last Location known
+        // And push the data in the database
+        // This will be done in the onConnect callback.
+        locationClient = new LocationClient(this, this, null)
+        locationClient.connect
 
         if (isMoving(currentActivityType)) {
-            //Start location updates intent
-            // TODO
-          }
+          //Start location updates service
+          // TODO
+        }
       } else {
 
         var previousActivityType: Int = prefs.getInt(KEY_PREVIOUS_ACTIVITY_TYPE,
@@ -90,59 +102,46 @@ class ActivityRecognitionIntentService
         // Activity changed
         if (previousActivityType != currentActivityType) {
           if (isMoving(previousActivityType) && !isMoving(currentActivityType)) {
-            //Start location updates intent
+            //Start location updates service
             // TODO
           } else if (!isMoving(previousActivityType) && isMoving(currentActivityType)) {
-            // Stop location updates intent
+            // Stop location updates service
             // TODO
           }
-          // Push to database
-          // TODO
+          // Retrieve the last Location known
+          // And push the data in the database
+          // This will be done in the onConnect callback since we only use the
+          // location Client for it.
+          locationClient = new LocationClient(this, this, null)
+          locationClient.connect
         }
       }
     }
   }
 
-  // UNUSED FOR NOW
-  /**
-    * Post a notification to the user. The notification prompts the user to click it to
-    * open the device's GPS settings
-    */
-  def sendNotification {
-    // Create a notification builder that's compatible with platforms >= version 4
-    var builder: NotificationCompat.Builder =
-      new NotificationCompat.Builder(getApplicationContext())
+  /*
+   * Connection callbacks related functions
+   */
+  override def onConnected(bundle: Bundle) {
+    // Get a handle to the datas
+    var dbHelper: DbHelper = new DbHelper(this)
 
-    // Set the title, text, and icon
-    builder.setContentTitle("Widigo")
-    .setContentText("Click to turn on GPS or swipe to ignore")
-    //.setSmallIcon(R.drawable.ic_notification)
+    val currentLocation: Location = locationClient.getLastLocation()
 
-    // Get the Intent that starts the Location settings panel
-    .setContentIntent(getContentIntent())
+    if (currentLocation != null) {
+      // Push to database
+      dbHelper.addActivityEntry(
+        currentLocation,
+        prefs.getInt(KEY_PREVIOUS_ACTIVITY_TYPE, DetectedActivity.UNKNOWN),
+        prefs.getInt(KEY_PREVIOUS_ACTIVITY_ID, -1))
+    } else {
+      // TODO display a notification for that the user activate the GPS
+    }
 
-    // Get an instance of the Notification Manager
-    var notifyManager: NotificationManager =
-      getSystemService(Context.NOTIFICATION_SERVICE).asInstanceOf[NotificationManager]
-
-    // Build the notification and post it
-    notifyManager.notify(0, builder.build())
+    locationClient.disconnect()
   }
 
-  // UNUSED FOR NOW
-  /**
-   * Get a content Intent for the notification
-   *
-   * @return A PendingIntent that starts the device's Location Settings panel.
-   */
-  def getContentIntent(): PendingIntent = {
-
-    // Set the Intent action to open Location Settings
-    var gpsIntent: Intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-
-    // Create a PendingIntent to start an Activity
-    return PendingIntent.getActivity(getApplicationContext(), 0, gpsIntent,
-      PendingIntent.FLAG_UPDATE_CURRENT)
+  override def onDisconnected() {
   }
 
   /**
@@ -157,7 +156,48 @@ class ActivityRecognitionIntentService
     case _ => true
   }
 
-  // UNUSED
+
+  // Functions that follows are unused
+  /**
+    * Post a notification to the user. The notification prompts the user to click it to
+    * open the device's GPS settings
+    */
+  def sendNotification {
+    // Create a notification builder that's compatible with platforms >= version 4
+    var builder: NotificationCompat.Builder =
+    new NotificationCompat.Builder(getApplicationContext())
+
+    // Set the title, text, and icon
+    builder.setContentTitle("Widigo")
+    .setContentText("Click to turn on GPS or swipe to ignore")
+    //.setSmallIcon(R.drawable.ic_notification)
+
+    // Get the Intent that starts the Location settings panel
+    .setContentIntent(getContentIntent())
+
+    // Get an instance of the Notification Manager
+    var notifyManager: NotificationManager =
+    getSystemService(Context.NOTIFICATION_SERVICE).asInstanceOf[NotificationManager]
+
+    // Build the notification and post it
+    notifyManager.notify(0, builder.build())
+  }
+
+  /**
+    * Get a content Intent for the notification
+    *
+    * @return A PendingIntent that starts the device's Location Settings panel.
+    */
+  def getContentIntent(): PendingIntent = {
+
+    // Set the Intent action to open Location Settings
+    var gpsIntent: Intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+
+    // Create a PendingIntent to start an Activity
+    return PendingIntent.getActivity(getApplicationContext(), 0, gpsIntent,
+      PendingIntent.FLAG_UPDATE_CURRENT)
+  }
+
   /**
     * Map detected activity types to strings
     *
