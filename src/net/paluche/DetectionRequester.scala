@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.paluche.widigo
+package net.paluche.Widigo
 
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GooglePlayServicesUtil

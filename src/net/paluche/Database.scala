@@ -5,6 +5,7 @@ import android.database.Cursor
 import android.content.Context
 import android.content.ContentValues
 import android.graphics.Color
+import android.location.Location
 
 import com.google.android.gms.location.DetectedActivity
 import com.google.android.gms.maps.model.LatLng
@@ -12,22 +13,22 @@ import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 
 
-class Activity(val polylineOptions: PolylineOptions,
-               val activityID: Int,
-               val activityType: Int,
-               val pointList: List[ActivityPoint] )
+class WidigoActivity(val polylineOptions: PolylineOptions,
+  val activityID: Int,
+  val activityType: Int,
+  val pointList: List[WidigoActivityPoint] )
 
-class ActivityPoint (val timestamp: Long,
-                     val latitude: Double,
-                     val longitude: Double,
-                     val hasAltitude: Boolean,
-                     val altitude: Double,
-                     val hasSpeed: Boolean,
-                     val speed: Float)
+class WidigoActivityPoint (
+  val timestamp: Long,
+  val latitude: Double,
+  val longitude: Double,
+  val hasAltitude: Boolean,
+  val altitude: Double,
+  val hasSpeed: Boolean,
+  val speed: Float)
 
 class DbHelper(context: Context) extends
     SQLiteOpenHelper(context, "Widigo.db", null, 1) {
-
   /*
    * Activity table
    */
@@ -81,35 +82,35 @@ class DbHelper(context: Context) extends
   /*
    * Add data
    */
-  def addActivityEntry(activityPoint: ActivityPoint, activityType: Integer,
-      activityID: Integer): Long = {
+  def addActivityEntry(location: Location, activityType: Integer,
+    activityID: Integer): Long = {
     val db: SQLiteDatabase = this.getWritableDatabase();
     var values: ContentValues = new ContentValues()
 
-    values.put(columnNameTimestamp, activityPoint.timestamp.asInstanceOf[java.lang.Long])
+    values.put(columnNameTimestamp, location.getTime.asInstanceOf[java.lang.Long])
     values.put(columnNameActivityType, activityType)
     values.put(columnNameActivityID, activityID)
-    values.put(columnNameLatitude, activityPoint.latitude)
-    values.put(columnNameLongitude, activityPoint.longitude)
+    values.put(columnNameLatitude, location.getLatitude)
+    values.put(columnNameLongitude, location.getLongitude)
 
-    if (activityPoint.hasAltitude)
-      values.put(columnNameAltitude, activityPoint.altitude)
+    if (location.hasAltitude)
+      values.put(columnNameAltitude, location.getAltitude)
     else
       values.putNull(columnNameAltitude)
 
-    if (activityPoint.hasSpeed)
-      values.put(columnNameSpeed, activityPoint.speed.toDouble)
+    if (location.hasSpeed)
+      values.put(columnNameSpeed, location.getSpeed.toDouble)
     else
       values.putNull(columnNameSpeed)
 
-    return db.insert( tableName, null, values)
+    return db.insert(tableName, null, values)
   }
 
   /*
    * Getting data from the database
    */
 
-  private def getLastActivitPoint(): ActivityPoint = {
+  private def getLastActivitPoint(): WidigoActivityPoint = {
     val db: SQLiteDatabase  = this.getReadableDatabase();
     var cursor: Cursor = db.query(
       tableName,
@@ -123,7 +124,7 @@ class DbHelper(context: Context) extends
     extractActivityPoint(cursor)
   }
   private def extractActivityPoint(cursor: Cursor) = {
-    new ActivityPoint(
+    new WidigoActivityPoint(
       cursor.getLong(columnIndexTimestamp),
       cursor.getDouble(columnIndexLatitude),
       cursor.getDouble(columnIndexLongitude),
@@ -135,7 +136,7 @@ class DbHelper(context: Context) extends
 
   // Timestamp arguments are the UTC time in milliseconds since January 1, 1970
   private def getActivitiesDataByDate(startTimestamp: Long,
-      endTimestamp: Long): Cursor = {
+    endTimestamp: Long): Cursor = {
     val db: SQLiteDatabase  = this.getReadableDatabase();
 
     db.query(
@@ -148,22 +149,22 @@ class DbHelper(context: Context) extends
       null,                 // Don't group the rows
       null,                 // Don't filter by group rows
       columnNameTimestamp + " DESC")
-    }
+  }
 
   def getActivitiesByDate(startTimestamp: Long,
-      endTimestamp: Long): List[Activity] = {
+    endTimestamp: Long): List[WidigoActivity] = {
 
     // Get datas
     var cursor: Cursor = getActivitiesDataByDate(startTimestamp, endTimestamp)
 
     // Convert database datas into a List of activities
-    var activities: List[Activity] = List()
+    var activities: List[WidigoActivity] = List()
 
     do {
       var polylineOpt: PolylineOptions   = new PolylineOptions()
-      var pointList: List[ActivityPoint] = List()
-      var activityID                     = cursor.getInt(columnIndexActivityID)
-      var activityType                   = cursor.getInt(columnIndexActivityType)
+      var pointList: List[WidigoActivityPoint] = List()
+      var activityID                           = cursor.getInt(columnIndexActivityID)
+      var activityType                         = cursor.getInt(columnIndexActivityType)
 
       // Set the color according to the type of activity
       activityType match {
@@ -172,7 +173,7 @@ class DbHelper(context: Context) extends
         case DetectedActivity.ON_FOOT    => polylineOpt.color(Color.CYAN)
         case DetectedActivity.STILL      => polylineOpt.color(Color.RED)
         case DetectedActivity.UNKNOWN | DetectedActivity.TILTING | _
-          => polylineOpt.color(Color.WHITE)
+        => polylineOpt.color(Color.WHITE)
       }
 
       do{
@@ -186,7 +187,7 @@ class DbHelper(context: Context) extends
       } while(cursor.moveToNext() && activityID == cursor.getInt(columnIndexActivityID))
 
       // Add the activity to the activities list.
-      (new Activity(
+      (new WidigoActivity(
         polylineOpt,
         activityID,
         activityType,
