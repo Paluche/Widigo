@@ -46,7 +46,7 @@ class ActivityRecognitionIntentService
     extends IntentService("WidigoActivity") {
   import WidigoUtils._
 
-  var prefs:       SharedPreferences = null
+  var prefs:      SharedPreferences = null
   var dateFormat: SimpleDateFormat  = null
 
   override def onHandleIntent(intent: Intent) {
@@ -75,24 +75,35 @@ class ActivityRecognitionIntentService
         editor.putInt(KEY_PREVIOUS_ACTIVITY_TYPE, currentActivityType)
         editor.commit()
 
-        // And push to database
+        // Push to database
         // TODO
-      }
 
-      var previousActivityType: Int = prefs.getInt(KEY_PREVIOUS_ACTIVITY_TYPE,
-        DetectedActivity.UNKNOWN)
+        if (isMoving(currentActivityType)) {
+            //Start location updates intent
+            // TODO
+          }
+      } else {
 
-      // Activity changed
-      if (previousActivityType != currentActivityType) {
-        if (isMoving(previousActivityType) && !isMoving(currentActivityType)) {
-          // TODO Start location updates intent
-        } else if (!isMoving(previousActivityType) && isMoving(currentActivityType)) {
-          // TODO Stop location updates intent
+        var previousActivityType: Int = prefs.getInt(KEY_PREVIOUS_ACTIVITY_TYPE,
+          DetectedActivity.UNKNOWN)
+
+        // Activity changed
+        if (previousActivityType != currentActivityType) {
+          if (isMoving(previousActivityType) && !isMoving(currentActivityType)) {
+            //Start location updates intent
+            // TODO
+          } else if (!isMoving(previousActivityType) && isMoving(currentActivityType)) {
+            // Stop location updates intent
+            // TODO
+          }
+          // Push to database
+          // TODO
         }
       }
     }
   }
 
+  // UNUSED FOR NOW
   /**
     * Post a notification to the user. The notification prompts the user to click it to
     * open the device's GPS settings
@@ -118,6 +129,7 @@ class ActivityRecognitionIntentService
     notifyManager.notify(0, builder.build())
   }
 
+  // UNUSED FOR NOW
   /**
    * Get a content Intent for the notification
    *
@@ -145,6 +157,7 @@ class ActivityRecognitionIntentService
     case _ => true
   }
 
+  // UNUSED
   /**
     * Map detected activity types to strings
     *

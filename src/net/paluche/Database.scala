@@ -181,7 +181,7 @@ class DbHelper(context: Context) extends
           cursor.getDouble(columnIndexLongitude)))
 
         // Add pointdata to pointList
-       pointList = pointList ++ List(extractActivityPoint(cursor))
+        pointList = pointList ++ List(extractActivityPoint(cursor))
 
       } while(cursor.moveToNext() && activityID == cursor.getInt(columnIndexActivityID))
 

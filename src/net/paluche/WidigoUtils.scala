@@ -75,7 +75,6 @@ object WidigoUtils {
   // My tracks to display preferences
   val KEY_MY_TRACKS_START_DATE: String =
     "net.paluche.widigo.KEY_MY_TRACKS_START_DATE"
-
   val KEY_MY_TRACKS_STOP_DATE: String =
     "net.paluche.widigo.KEY_MY_TRACKS_STOP_DATE"
 
