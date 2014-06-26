@@ -80,45 +80,40 @@ with ConnectionCallbacks {
 
         // Retrieve from the database the type and ID of the last
         // activity saved
-        // var dbHelper: DbHelper = new DbHelper(this)
-        // var widigoActivityPoint: WidigoActivityPoint = getLastActivityPoint()
+        var dbHelper: DbHelper = new DbHelper(this)
+        var widigoActivity: WidigoActivity = dbHelper.getLastActivityIdAndType()
 
         var editor: Editor = prefs.edit()
-        editor.putInt(KEY_PREVIOUS_ACTIVITY_TYPE, currentActivityType)
-        editor.putInt(KEY_PREVIOUS_ACTIVITY_ID,   0)
+        if (widigoActivity == null) {
+          editor.putInt(KEY_PREVIOUS_ACTIVITY_TYPE, DetectedActivity.UNKNOWN)
+          editor.putInt(KEY_PREVIOUS_ACTIVITY_ID,   0)
+
+        } else {
+          editor.putInt(KEY_PREVIOUS_ACTIVITY_TYPE, widigoActivity.activityType)
+          editor.putInt(KEY_PREVIOUS_ACTIVITY_ID,   widigoActivity.activityID)
+        }
         editor.commit()
+      }
+
+      var previousActivityType: Int = prefs.getInt(KEY_PREVIOUS_ACTIVITY_TYPE,
+        DetectedActivity.UNKNOWN)
+
+      // Activity changed
+      if (previousActivityType != currentActivityType) {
+        if (!isMoving(previousActivityType) && isMoving(currentActivityType)) {
+          //Start location updates service
+          // TODO
+        } else if (isMoving(previousActivityType) && !isMoving(currentActivityType)) {
+          // Stop location updates service
+          // TODO
+        }
 
         // Retrieve the last Location known
         // And push the data in the database
-        // This will be done in the onConnect callback.
+        // This will be done in the onConnect callback since we only use the
+        // location Client for it.
         locationClient = new LocationClient(this, this, null)
         locationClient.connect
-
-        if (isMoving(currentActivityType)) {
-          //Start location updates service
-          // TODO
-        }
-      } else {
-
-        var previousActivityType: Int = prefs.getInt(KEY_PREVIOUS_ACTIVITY_TYPE,
-          DetectedActivity.UNKNOWN)
-
-        // Activity changed
-        if (previousActivityType != currentActivityType) {
-          if (isMoving(previousActivityType) && !isMoving(currentActivityType)) {
-            //Start location updates service
-            // TODO
-          } else if (!isMoving(previousActivityType) && isMoving(currentActivityType)) {
-            // Stop location updates service
-            // TODO
-          }
-          // Retrieve the last Location known
-          // And push the data in the database
-          // This will be done in the onConnect callback since we only use the
-          // location Client for it.
-          locationClient = new LocationClient(this, this, null)
-          locationClient.connect
-        }
       }
     }
   }
@@ -137,7 +132,7 @@ with ConnectionCallbacks {
       dbHelper.addActivityEntry(
         currentLocation,
         prefs.getInt(KEY_PREVIOUS_ACTIVITY_TYPE, DetectedActivity.UNKNOWN),
-        prefs.getInt(KEY_PREVIOUS_ACTIVITY_ID, -1))
+        prefs.getInt(KEY_PREVIOUS_ACTIVITY_ID, 0))
     } else {
       // TODO display a notification for that the user activate the GPS
     }
@@ -145,8 +140,7 @@ with ConnectionCallbacks {
     locationClient.disconnect()
   }
 
-  override def onDisconnected() {
-  }
+  override def onDisconnected() {}
 
   /**
     * Determine if an activity means that the user is moving.
