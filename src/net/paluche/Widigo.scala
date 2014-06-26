@@ -1,5 +1,39 @@
 package net.paluche.Widigo
 
+import android.app.ActionBar
+import android.app.Activity
+import android.app.Dialog
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter;
+import android.content.BroadcastReceiver;
+import android.content.SharedPreferences
+import android.content.SharedPreferences.Editor
+import android.graphics.Color
+import android.location.Location
+import android.os.Bundle
+import android.provider.Settings
+import android.support.v4.app.DialogFragment
+import android.support.v4.app.FragmentActivity
+import android.support.v4.content.LocalBroadcastManager;
+import android.text.Spanned
+import android.util.Log
+import android.view.ViewGroup.LayoutParams
+import android.view.Gravity
+import android.view.Menu
+import android.widget.{CheckBox, Switch, Space, ListView, DatePicker}
+import android.widget.{TextView, Button, LinearLayout, FrameLayout}
+
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GooglePlayServicesClient
+import com.google.android.gms.common.GooglePlayServicesUtil
+import com.google.android.gms.location._
+import com.google.android.gms.maps._
+import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.LatLng
+
+import java.io.IOException
+
 import macroid._
 import macroid.FullDsl._
 import macroid.ActivityContext
@@ -14,39 +48,6 @@ import scala.language.postfixOps
 import scala.concurrent.{Promise, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.async.Async.async
-
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter;
-import android.content.BroadcastReceiver;
-import android.app.Activity
-import android.app.Dialog
-import android.text.Spanned
-import android.os.Bundle
-import android.view.ViewGroup.LayoutParams
-import android.view.Gravity
-import android.view.Menu
-import android.widget.{CheckBox, Switch, Space, ListView, DatePicker, TextView, Button, LinearLayout, FrameLayout}
-import android.provider.Settings
-import android.content.Context
-import android.util.Log
-import android.location.Location
-import android.graphics.Color
-
-import android.support.v4.app.DialogFragment
-import android.support.v4.app.FragmentActivity
-import android.app.ActionBar
-import android.support.v4.content.LocalBroadcastManager;
-
-import com.google.android.gms.common.ConnectionResult
-import com.google.android.gms.common.GooglePlayServicesClient
-import com.google.android.gms.common.GooglePlayServicesUtil
-import com.google.android.gms.location._
-import com.google.android.gms.maps._
-import com.google.android.gms.maps.model.MarkerOptions
-import com.google.android.gms.maps.model.LatLng
-
-import java.io.IOException
 
 class Widigo extends Activity with Contexts[Activity]
     with LocationListener
@@ -69,9 +70,10 @@ class Widigo extends Activity with Contexts[Activity]
   var locationClient:   LocationClient  = null
   var locationUpdatesRequested: Boolean = false
 
+  // Preferences
+
   // Layout variables
   var map: GoogleMap = null
-
   // Local position marker
   var marker: MarkerOptions = new MarkerOptions()
 
@@ -121,13 +123,6 @@ class Widigo extends Activity with Contexts[Activity]
 
     locationClient.connect
 
-    actionBar = getActionBar
-    // Hide the title of the app to leave more place for options buttons
-    actionBar.setCustomView(optionButtonLayout.get)
-    actionBar.setDisplayOptions(
-      ActionBar.DISPLAY_SHOW_CUSTOM | ActionBar.DISPLAY_USE_LOGO,
-      ActionBar.DISPLAY_HOME_AS_UP | ActionBar.DISPLAY_SHOW_CUSTOM |
-      ActionBar.DISPLAY_USE_LOGO | ActionBar.DISPLAY_SHOW_TITLE)
   }
 
   override def onStart {
@@ -142,21 +137,31 @@ class Widigo extends Activity with Contexts[Activity]
       return // Can't I do something better?
     }
 
+    // TODO
+    // Get the preferences and start/continue/stop the Activity Intent if
+    // tracking Switch status has changed.
+
     // Start the requests for activity recognition updates.
     //requestType = REQUEST_TYPE_ADD_UPDATES
     //detectionRequester.requestUpdates
   }
 
-  override def onPause {
-    // Stop listening to broadcasts when the Activity isn't visible.
-
-    locationClient.requestLocationUpdates(locationRequest, this)
-
-    super.onPause
-  }
   // Register the broadcast receiver and update the log of activity updates
   override def onResume() {
     super.onResume();
+
+    // Renew the actionBar
+    actionBar = getActionBar
+    // Hide the title of the app to leave more place for options buttons
+    actionBar.setCustomView(optionButtonLayout.get)
+    actionBar.setDisplayOptions(
+      ActionBar.DISPLAY_SHOW_CUSTOM | ActionBar.DISPLAY_USE_LOGO,
+      ActionBar.DISPLAY_HOME_AS_UP | ActionBar.DISPLAY_SHOW_CUSTOM |
+      ActionBar.DISPLAY_USE_LOGO | ActionBar.DISPLAY_SHOW_TITLE)
+
+    // TODO add a variable set at true when locationClient is connected
+    //if (!locationUpdatesRequested)
+    //  locationClient.requestLocationUpdates(locationRequest, this)
 
     // TODO
     // Get the preferences and start/continue/stop the Activity Intent if
@@ -169,6 +174,13 @@ class Widigo extends Activity with Contexts[Activity]
 
     //// Load updated activity history
     //updateActivityHistory();
+  }
+
+  override def onPause() {
+    if (locationUpdatesRequested)
+      locationClient.removeLocationUpdates(this)
+    locationUpdatesRequested = false
+    super.onPause
   }
 
   override def onContentChanged() {
@@ -322,37 +334,6 @@ class Widigo extends Activity with Contexts[Activity]
  }
 
  // Display the activity detection history stored in the
- // log file
- def updateActivityHistory() {
-   // Try to load data from the history file
-   try {
-     // Load log file records into the List
-     var activityDetectionHistory = logFile.loadLogFile()
-
-     // Clear the adapter of existing data
-     //mStatusAdapter.clear()
-
-     // Add each element of the history to the adapter
-     for (activity: Spanned <- activityDetectionHistory)
-       runUi(logBox <~ addViews(List(w[TextView] <~ activityPrintBox(activity))))
-
-     // If the number of loaded records is greater than the max log size
-     // And delete the old log file
-     if ((mStatusAdapter.getCount() > MAX_LOG_SIZE) &&
-       !logFile.removeLogFiles()) {
-       // Log an error if unable to delete the log file
-       logE"Log file deletion error"
-     }
-
-     // Trigger the adapter to update the display
-     //mStatusAdapter.notifyDataSetChanged()
-
-   } catch {
-     // If an error occurs while reading the history file
-     case e: IOException =>
-     logE"${e.getMessage}"
-   }
- }
 
  var updateListReceiver: BroadcastReceiver = new BroadcastReceiver() {
    override def onReceive(context: Context, intent: Intent) {
@@ -368,13 +349,6 @@ class Widigo extends Activity with Contexts[Activity]
 /*
  * Actually I don't want the requests to stop
 
- override def onStop {
-
-   if (locationClient.isConnected)
-     stopPeriodicUpdates
-   locationClient.disconnect
-   super.onStop
- }
 
 
  def startPeriodicUpdates {
