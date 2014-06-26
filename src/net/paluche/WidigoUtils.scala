@@ -1,4 +1,4 @@
-package net.paluche.Widigo
+package net.paluche.widigo
 
 import macroid.LogTag
 
@@ -23,19 +23,19 @@ object WidigoUtils {
 
   // ent actions and extras for sending information from the IntentService to the Activity
   val ACTION_CONNECTION_ERROR: String =
-    "net.paluche.Widigo.ACTION_CONNECTION_ERROR"
+    "net.paluche.widigo.ACTION_CONNECTION_ERROR"
 
   val ACTION_REFRESH_STATUS_LIST: String =
-    "net.paluche.Widigo.ACTION_REFRESH_STATUS_LIST"
+    "net.paluche.widigo.ACTION_REFRESH_STATUS_LIST"
 
   val CATEGORY_LOCATION_SERVICES: String =
-    "net.paluche.Widigo.CATEGORY_LOCATION_SERVICES"
+    "net.paluche.widigo.CATEGORY_LOCATION_SERVICES"
 
   val EXTRA_CONNECTION_ERROR_CODE: String =
-    "net.paluche.Widigo.EXTRA_CONNECTION_ERROR_CODE"
+    "net.paluche.widigo.EXTRA_CONNECTION_ERROR_CODE"
 
   val EXTRA_CONNECTION_ERROR_MESSAGE: String =
-    "net.paluche.Widigo.EXTRA_CONNECTION_ERROR_MESSAGE"
+    "net.paluche.widigo.EXTRA_CONNECTION_ERROR_MESSAGE"
 
   // Constants used to establish the activity update erval
   val  MILLISECONDS_PER_SECOND : Int = 1000
@@ -50,33 +50,33 @@ object WidigoUtils {
    * Shared Preferences keys
    */
   val SHARED_PREFERENCES: String =
-    "net.paluche.Widigo.SHARED_PREFERENCES"
+    "net.paluche.widigo.SHARED_PREFERENCES"
 
   // Key in the repository for the previous activity
   val KEY_PREVIOUS_ACTIVITY_TYPE: String  =
-    "net.paluche.Widigo.KEY_PREVIOUS_ACTIVITY_TYPE"
+    "net.paluche.widigo.KEY_PREVIOUS_ACTIVITY_TYPE"
   val KEY_PREVIOUS_ACTIVITY_ID: String =
-    "net.paluche.Widigo.KEY_PREVIOUS_ACTIVITY_ID"
+    "net.paluche.widigo.KEY_PREVIOUS_ACTIVITY_ID"
 
   // Tracking preferences
   val KEY_TRACKING_ON: String =
-    "net.paluche.Widigo.KEY_TRACKING_ON"
+    "net.paluche.widigo.KEY_TRACKING_ON"
   val KEY_TRACKING_STILL: String =
-    "net.paluche.Widigo.KEY_TRACKING_STILL"
+    "net.paluche.widigo.KEY_TRACKING_STILL"
   val KEY_TRACKING_WALKING: String =
-    "net.paluche.Widigo.KEY_TRACKING_WALKING"
+    "net.paluche.widigo.KEY_TRACKING_WALKING"
   val KEY_TRACKING_RUNNING: String =
-    "net.paluche.Widigo.KEY_TRACKING_RUNNING"
+    "net.paluche.widigo.KEY_TRACKING_RUNNING"
   val KEY_TRACKING_IN_VEHICULE: String =
-    "net.paluche.Widigo.KEY_TRACKING_IN_VEHICULE"
+    "net.paluche.widigo.KEY_TRACKING_IN_VEHICULE"
   val KEY_TRACKING_ON_BICYCLE: String =
-    "net.paluche.Widigo.KEY_TRACKING_ON_BICYCLE"
+    "net.paluche.widigo.KEY_TRACKING_ON_BICYCLE"
 
   // My tracks to display preferences
   val KEY_MY_TRACKS_START_DATE: String =
-    "net.paluche.Widigo.KEY_MY_TRACKS_START_DATE"
+    "net.paluche.widigo.KEY_MY_TRACKS_START_DATE"
   val KEY_MY_TRACKS_STOP_DATE: String =
-    "net.paluche.Widigo.KEY_MY_TRACKS_STOP_DATE"
+    "net.paluche.widigo.KEY_MY_TRACKS_STOP_DATE"
 
   // Constants for constructing the log file name
   // TODO remove this
@@ -85,7 +85,7 @@ object WidigoUtils {
 
   // Keys in the repository for storing the log file info
   val KEY_LOG_FILE_NUMBER: String =
-    "net.paluche.Widigo.KEY_LOG_FILE_NUMBER"
+    "net.paluche.widigo.KEY_LOG_FILE_NUMBER"
   val KEY_LOG_FILE_NAME: String =
-    "net.paluche.Widigo.KEY_LOG_FILE_NAME"
+    "net.paluche.widigo.KEY_LOG_FILE_NAME"
 }

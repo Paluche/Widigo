@@ -1,4 +1,4 @@
-package net.paluche.Widigo
+package net.paluche.widigo
 
 import macroid._
 import macroid.contrib.Layouts._

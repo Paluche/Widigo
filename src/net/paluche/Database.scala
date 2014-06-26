@@ -1,4 +1,4 @@
-package net.paluche.Widigo
+package net.paluche.widigo
 
 import android.database.sqlite._
 import android.database.Cursor
