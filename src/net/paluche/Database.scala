@@ -150,10 +150,14 @@ class DbHelper(context: Context) extends SQLiteOpenHelper(context,
 
     cursor.moveToFirst
 
+    if (cursor.getCount == 0)
+      return null
+
     var activityId:   Int = cursor.getInt(columnIndexActivityID)
     var activityType: Int = cursor.getInt(columnIndexActivityType)
 
     logD"getLastActivityIdAndType: ID ${activityId}, type ${activityType}"
+
     new WidigoActivity(null,
       activityId,
       activityType,
@@ -174,7 +178,7 @@ class DbHelper(context: Context) extends SQLiteOpenHelper(context,
     var activities: List[WidigoActivity] = List()
 
     do {
-      var polylineOpt: PolylineOptions   = new PolylineOptions()
+      var polylineOpt: PolylineOptions         = new PolylineOptions()
       var pointList: List[WidigoActivityPoint] = List()
       var activityID                           = cursor.getInt(columnIndexActivityID)
       var activityType                         = cursor.getInt(columnIndexActivityType)
