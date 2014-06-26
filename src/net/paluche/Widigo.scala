@@ -77,7 +77,6 @@ class Widigo extends Activity with Contexts[Activity]
 
   // Buttons
   // Content view.
-  var optionDisplayed : Boolean = false
   lazy val trackingOptionButton = {
     var intent: Intent = new Intent(this, classOf[TrackingOptionActivity])
     startActivity(intent)
@@ -170,14 +169,6 @@ class Widigo extends Activity with Contexts[Activity]
 
     //// Load updated activity history
     //updateActivityHistory();
-  }
-
-  override def onBackPressed() {
-    if (optionDisplayed) {
-      setContentView(homeLayout.get)
-      optionDisplayed = false
-    } else
-      finish()
   }
 
   override def onContentChanged() {

@@ -10,7 +10,11 @@ proguardCache in Android ++= Seq(
   ProguardCache("org.scaloid") % "org.scaloid"
 )
 
-proguardOptions in Android ++= Seq("-dontobfuscate", "-dontoptimize", "-ignorewarnings", "-keep class scala.Dynamic")
+proguardOptions in Android ++= Seq("-dontobfuscate",
+                                   "-dontoptimize",
+                                   "-ignorewarnings",
+                                   "-keep class scala.Dynamic",
+                                   "-keep class scala.Option.foreach")
 
 resolvers += "JCenter" at "http://jcenter.bintray.com"
 

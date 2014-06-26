@@ -151,8 +151,8 @@ with IdGeneration {
   import Options._
   import WidigoUtils._
 
-  var startDateButton: Button = null
-  var stopDateButton: Button  = null
+  var startDateButton = slot[Button]
+  var stopDateButton  = slot[Button]
 
   var dateFormat: SimpleDateFormat = null
 
@@ -178,9 +178,9 @@ with IdGeneration {
 
   lazy val myTracksOptionLayout = l[VerticalLinearLayout](
     w[TextView] <~ text("Start Date:"),
-    w[Button]   <~ id(Id.startDateButton) <~ On.click(startDateButtonClick),
+    w[Button]   <~ wire(startDateButton) <~ On.click(startDateButtonClick),
     w[TextView] <~ text("\nStop Date:"),
-    w[Button]   <~ id(Id.stopDateButton) <~ On.click(stopDatePickerDialog))
+    w[Button]   <~ wire(stopDateButton) <~ On.click(stopDatePickerDialog))
 
   override def onCreate(b: Bundle) {
     super.onCreate(b)
@@ -192,8 +192,6 @@ with IdGeneration {
       ActionBar.DISPLAY_HOME_AS_UP | ActionBar.DISPLAY_SHOW_CUSTOM |
       ActionBar.DISPLAY_USE_LOGO | ActionBar.DISPLAY_SHOW_TITLE)
 
-    startDateButton = findViewById(Id.startDateButton).asInstanceOf[Button]
-    stopDateButton  = findViewById(Id.stopDateButton).asInstanceOf[Button]
     // Set the date slot to the saved date from preferences.
     try {
       dateFormat = DateFormat.getDateTimeInstance().asInstanceOf[SimpleDateFormat]
@@ -209,8 +207,8 @@ with IdGeneration {
     var myTracksOption: MyTracksOption = getMyTracksOption()
 
     dateFormat.applyPattern("yyyy-MM-dd")
-    startDateButton.setText(dateFormat.format(new Date(myTracksOption.startDate * 1000)))
-    stopDateButton.setText(dateFormat.format(new Date(myTracksOption.stopDate * 1000)))
+    (startDateButton <~ text(dateFormat.format(new Date(myTracksOption.startDate * 1000)))).run
+    (stopDateButton  <~ text(dateFormat.format(new Date(myTracksOption.stopDate * 1000)))).run
   }
 
   def getMyTracksOption(): MyTracksOption = {
@@ -255,7 +253,7 @@ with IdGeneration {
     }
 
     // Update display
-    startDateButton.setText(dateFormat.format(new Date(myTracksOption.startDate * 1000)))
-    stopDateButton.setText(dateFormat.format(new Date(myTracksOption.stopDate * 1000)))
+    (startDateButton <~ text(dateFormat.format(new Date(myTracksOption.startDate * 1000)))).run
+    (stopDateButton  <~ text(dateFormat.format(new Date(myTracksOption.stopDate * 1000)))).run
   }
 }
