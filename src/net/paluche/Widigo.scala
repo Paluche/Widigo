@@ -89,13 +89,11 @@ class Widigo extends Activity with Contexts[Activity]
    */
   // Content view.
   lazy val trackingOptionButton = {
-    var intent: Intent = new Intent(this, classOf[TrackingOptionActivity])
-    startActivity(intent)
+    startActivity(new Intent(this, classOf[TrackingOptionActivity]))
   }
 
   lazy val myTracksOptionButton = {
-    var intent: Intent = new Intent(this, classOf[MyTracksOptionActivity])
-    startActivity(intent)
+    startActivity(new Intent(this, classOf[MyTracksOptionActivity]))
   }
 
   /*
@@ -172,6 +170,10 @@ class Widigo extends Activity with Contexts[Activity]
     // We launch this code when we start the app and we are back from the
     // Options activities.
     updateTracesOnMap()
+
+    if (prefs.getBoolean(KEY_TRACKING_ON, false))
+      // Start the IntentService
+    {}
 
     // TODO
     // Get the preferences and start/continue/stop the Activity Intent if
@@ -290,15 +292,18 @@ class Widigo extends Activity with Contexts[Activity]
     map.clear
 
     marker           = null
-    //widigoActivities = dbHelper.getActivitiesByDate(
-    //  prefs.getLong(KEY_MY_TRACKS_START_DATE, 0),
-    //  prefs.getLong(KEY_MY_TRACKS_STOP_DATE, (new Date()).getTime))
+    widigoActivities = dbHelper.getActivitiesByDate(
+      prefs.getLong(KEY_MY_TRACKS_START_DATE, 0),
+      prefs.getLong(KEY_MY_TRACKS_STOP_DATE, (new Date()).getTime))
 
     if (widigoActivities != null) {
       for (widigoActivity: WidigoActivity <- widigoActivities) {
         map.addPolyline(widigoActivity.polylineOptions)
       }
     }
+
+    // TODO remove TEST
+    dbHelper.getLastActivityIdAndType()
   }
 
   def updateMarkerOnMap(latLng: LatLng) {

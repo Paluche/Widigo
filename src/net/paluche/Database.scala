@@ -12,6 +12,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 
+import macroid.FullDsl._
 
 class WidigoActivity(val polylineOptions: PolylineOptions,
   val activityID: Int,
@@ -27,22 +28,23 @@ class WidigoActivityPoint (
   val hasSpeed: Boolean,
   val speed: Float)
 
-class DbHelper(context: Context) extends
-    SQLiteOpenHelper(context, "Widigo.db", null, 1) {
+class DbHelper(context: Context) extends SQLiteOpenHelper(context,
+  "Widigo.db", null, 1) {
+  import WidigoUtils._
   /*
    * Activity table
    */
   // Table description
-  val tableName:              String = " activityPoints"
+  val tableName:              String = "activityPoints"
 
   // Columns name definition
-  val columnNameTimestamp:    String = " timestamp"
-  val columnNameActivityID:   String = " activityID"
-  val columnNameActivityType: String = " activityType"
-  val columnNameLatitude:     String = " latitude"
-  val columnNameLongitude:    String = " longitude"
-  val columnNameAltitude:     String = " altitude"
-  val columnNameSpeed:        String = " speed"
+  val columnNameTimestamp:    String = "timestamp"
+  val columnNameActivityID:   String = "activityID"
+  val columnNameActivityType: String = "activityType"
+  val columnNameLatitude:     String = "latitude"
+  val columnNameLongitude:    String = "longitude"
+  val columnNameAltitude:     String = "altitude"
+  val columnNameSpeed:        String = "speed"
 
   // Columns index definition
   val columnIndexTimestamp:    Int = 0
@@ -53,11 +55,6 @@ class DbHelper(context: Context) extends
   val columnIndexAltitude:     Int = 5
   val columnIndexSpeed:        Int = 6
 
-  // Data needed when we make a request (all of them)
-  val projection: Array[String] = Array(tableName, columnNameTimestamp,
-    columnNameActivityType, columnNameActivityID, columnNameLatitude,
-    columnNameLongitude, columnNameAltitude, columnNameSpeed)
-
   // SQLite helpers
   val intType:                String = " INTEGER"
   val realType:               String = " REAL"
@@ -65,7 +62,7 @@ class DbHelper(context: Context) extends
 
   def onCreate(db: SQLiteDatabase) {
     db.execSQL(
-      "CREATE TABLE WIDIGO " + tableName + " (" +
+      "CREATE TABLE " + tableName + " (" +
       columnNameTimestamp    + intType  + " PRIMARY KEY" + commaSep +
       columnNameActivityType + intType  + commaSep +
       columnNameActivityID   + intType  + commaSep +
@@ -125,11 +122,12 @@ class DbHelper(context: Context) extends
 
     db.query(
       tableName,            // The table name
-      projection,           // Columns we will get
-      columnNameTimestamp,  // Columns for the WHERE clause
+      null,                 // We want all the columns
+      columnNameTimestamp + " <= ? AND " +
+      columnNameTimestamp + ">= ?",
       Array(                // Argument for the WHERE clause
-        ">= " + startTimestamp.toString + " & ",
-        "<= " + endTimestamp.toString),
+        startTimestamp.toString,
+        endTimestamp.toString),
       null,                 // Don't group the rows
       null,                 // Don't filter by group rows
       columnNameTimestamp + " DESC")
@@ -138,23 +136,29 @@ class DbHelper(context: Context) extends
   /*
    * Getting data from the database
    */
-  def getLastActivity(): WidigoActivity = ???
-  //{
-  //  val db: SQLiteDatabase  = this.getReadableDatabase();
-  //  var cursor: Cursor = db.query(
-  //    tableName,
-  //    projection,
-  //    columnNameTimestamp,
-  //    Array("MAX"), // FIXME I don't konw the correct syntax
-  //    null,
-  //    null,
-  //    null)
+  def getLastActivityIdAndType(): WidigoActivity =
+  {
+    val db: SQLiteDatabase  = this.getReadableDatabase();
+    var cursor: Cursor =
+    db.rawQuery("SELECT MAX(" + columnNameTimestamp + "), " +
+      columnNameTimestamp    + commaSep +
+      columnNameActivityID   + commaSep +
+      columnNameActivityType + commaSep +
+      columnNameSpeed        +
+      " FROM " + tableName,
+      null)
 
-  //  new WidigoAcitivity(
-  //    cursor.getInt(columnIndexActivityID),
-  //    cursor.getInt(columnIndexActivityType),
-  //    null)
-  //}
+    cursor.moveToFirst
+
+    var activityId:   Int = cursor.getInt(columnIndexActivityID)
+    var activityType: Int = cursor.getInt(columnIndexActivityType)
+
+    logD"getLastActivityIdAndType: ID ${activityId}, type ${activityType}"
+    new WidigoActivity(null,
+      activityId,
+      activityType,
+      null)
+  }
 
   def getActivitiesByDate(startTimestamp: Long,
     endTimestamp: Long): List[WidigoActivity] = {
@@ -219,7 +223,7 @@ class DbHelper(context: Context) extends
   def removeActivitybyID(db: SQLiteDatabase, activityID: Integer) {
     db.delete(
       tableName,
-      columnNameActivityID + " LIKE ?",
+      columnNameActivityID + " = ?",
       Array(activityID.toString))
   }
 }
