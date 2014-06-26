@@ -77,8 +77,12 @@ with ConnectionCallbacks {
 
         // This is the first type an activity has been detected. Store the type
         // and initialise the ID
-        // TODO Retrieve from the database the type and ID of the last
-        // activity saved.
+
+        // Retrieve from the database the type and ID of the last
+        // activity saved
+        // var dbHelper: DbHelper = new DbHelper(this)
+        // var widigoActivityPoint: WidigoActivityPoint = getLastActivityPoint()
+
         var editor: Editor = prefs.edit()
         editor.putInt(KEY_PREVIOUS_ACTIVITY_TYPE, currentActivityType)
         editor.putInt(KEY_PREVIOUS_ACTIVITY_ID,   0)

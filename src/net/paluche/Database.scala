@@ -65,14 +65,14 @@ class DbHelper(context: Context) extends
 
   def onCreate(db: SQLiteDatabase) {
     db.execSQL(
-      "CREATE TABLE WIDIGO " + tableName +
-      " (" + columnNameTimestamp    + intType   + " PRIMARY KEY" + commaSep +
-      columnNameActivityType + intType   + commaSep +
-      columnNameActivityID   + intType   + commaSep +
-      columnNameLatitude     + realType  + commaSep +
-      columnNameLongitude    + realType  + commaSep +
-      columnNameAltitude     + realType  + commaSep +
-      columnNameSpeed + " )")
+      "CREATE TABLE WIDIGO " + tableName + " (" +
+      columnNameTimestamp    + intType  + " PRIMARY KEY" + commaSep +
+      columnNameActivityType + intType  + commaSep +
+      columnNameActivityID   + intType  + commaSep +
+      columnNameLatitude     + realType + commaSep +
+      columnNameLongitude    + realType + commaSep +
+      columnNameAltitude     + realType + commaSep +
+      columnNameSpeed        + realType + " )")
   }
 
   def onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -107,32 +107,16 @@ class DbHelper(context: Context) extends
   }
 
   /*
-   * Getting data from the database
+   * Helper
    */
-
-  private def getLastActivitPoint(): WidigoActivityPoint = {
-    val db: SQLiteDatabase  = this.getReadableDatabase();
-    var cursor: Cursor = db.query(
-      tableName,
-      projection,
-      columnNameTimestamp,
-      Array("MAX"), // FIXME I don't konw the correct syntax
-      null,
-      null,
-      null)
-
-    extractActivityPoint(cursor)
-  }
-  private def extractActivityPoint(cursor: Cursor) = {
-    new WidigoActivityPoint(
-      cursor.getLong(columnIndexTimestamp),
-      cursor.getDouble(columnIndexLatitude),
-      cursor.getDouble(columnIndexLongitude),
-      cursor.isNull(columnIndexAltitude),
-      cursor.getFloat(columnIndexAltitude),
-      cursor.isNull(columnIndexSpeed),
-      cursor.getFloat(columnIndexSpeed))
-  }
+  private def extractActivityPoint(cursor: Cursor) = new WidigoActivityPoint(
+    cursor.getLong(columnIndexTimestamp),
+    cursor.getDouble(columnIndexLatitude),
+    cursor.getDouble(columnIndexLongitude),
+    cursor.isNull(columnIndexAltitude),
+    cursor.getFloat(columnIndexAltitude),
+    cursor.isNull(columnIndexSpeed),
+    cursor.getFloat(columnIndexSpeed))
 
   // Timestamp arguments are the UTC time in milliseconds since January 1, 1970
   private def getActivitiesDataByDate(startTimestamp: Long,
@@ -151,11 +135,36 @@ class DbHelper(context: Context) extends
       columnNameTimestamp + " DESC")
   }
 
+  /*
+   * Getting data from the database
+   */
+  def getLastActivity(): WidigoActivity = ???
+  //{
+  //  val db: SQLiteDatabase  = this.getReadableDatabase();
+  //  var cursor: Cursor = db.query(
+  //    tableName,
+  //    projection,
+  //    columnNameTimestamp,
+  //    Array("MAX"), // FIXME I don't konw the correct syntax
+  //    null,
+  //    null,
+  //    null)
+
+  //  new WidigoAcitivity(
+  //    cursor.getInt(columnIndexActivityID),
+  //    cursor.getInt(columnIndexActivityType),
+  //    null)
+  //}
+
   def getActivitiesByDate(startTimestamp: Long,
     endTimestamp: Long): List[WidigoActivity] = {
 
     // Get datas
     var cursor: Cursor = getActivitiesDataByDate(startTimestamp, endTimestamp)
+
+    cursor.moveToFirst
+    if (cursor.getCount == 0)
+      return null
 
     // Convert database datas into a List of activities
     var activities: List[WidigoActivity] = List()
@@ -175,6 +184,12 @@ class DbHelper(context: Context) extends
         case DetectedActivity.UNKNOWN | DetectedActivity.TILTING | _
         => polylineOpt.color(Color.WHITE)
       }
+
+      // Geodesic reprenstation
+      polylineOpt.geodesic(true)
+
+      // Width of the line
+      polylineOpt.width(3)
 
       do{
         // Add point to Polyline
@@ -198,7 +213,9 @@ class DbHelper(context: Context) extends
     return activities
   }
 
-  // Remove an Activity
+  /*
+   * Remove an Activity
+   */
   def removeActivitybyID(db: SQLiteDatabase, activityID: Integer) {
     db.delete(
       tableName,

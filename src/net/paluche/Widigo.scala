@@ -29,10 +29,11 @@ import com.google.android.gms.common.GooglePlayServicesClient
 import com.google.android.gms.common.GooglePlayServicesUtil
 import com.google.android.gms.location._
 import com.google.android.gms.maps._
-import com.google.android.gms.maps.model.MarkerOptions
-import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.{LatLng, MarkerOptions, Polyline}
+import com.google.android.gms.maps.model.PolylineOptions
 
 import java.io.IOException
+import java.util.Date
 
 import macroid._
 import macroid.FullDsl._
@@ -58,26 +59,34 @@ class Widigo extends Activity with Contexts[Activity]
   import WidigoUtils._
 
   // Intent for activity recognition needs
-  var broadcastFilter:            IntentFilter          = null
-  private var broadcastManager:   LocalBroadcastManager = null
-  private var detectionRequester: DetectionRequester    = null
-  private var detectionRemover:   DetectionRemover      = null
+  private var broadcastFilter:          IntentFilter          = null
+  private var broadcastManager:         LocalBroadcastManager = null
+  private var detectionRequester:       DetectionRequester    = null
+  private var detectionRemover:         DetectionRemover      = null
 
-  var requestType = -1
+  private var requestType:              Int                   = -1
 
   // Location
-  var locationRequest:  LocationRequest = null
-  var locationClient:   LocationClient  = null
-  var locationUpdatesRequested: Boolean = false
+  private var locationRequest:          LocationRequest       = null
+  private var locationClient:           LocationClient        = null
+  private var locationClientConnected:  Boolean               = false
+  private var locationUpdatesRequested: Boolean               = false
 
-  // Preferences
+  // Datas of the application
+  private var prefs:                    SharedPreferences     = null
+  private var dbHelper:                 DbHelper              = null
 
-  // Layout variables
-  var map: GoogleMap = null
+  // Map
+  var map:                              GoogleMap             = null
   // Local position marker
-  var marker: MarkerOptions = new MarkerOptions()
+  var marker:                           MarkerOptions         = null
+  // List of activities actually displayed
+  var widigoActivities:                 List[WidigoActivity]  = null
 
-  // Buttons
+
+  /*
+   * Buttons actions
+   */
   // Content view.
   lazy val trackingOptionButton = {
     var intent: Intent = new Intent(this, classOf[TrackingOptionActivity])
@@ -87,18 +96,17 @@ class Widigo extends Activity with Contexts[Activity]
   lazy val myTracksOptionButton = {
     var intent: Intent = new Intent(this, classOf[MyTracksOptionActivity])
     startActivity(intent)
-
   }
 
-  // Layout
+  /*
+   * Layouts
+   */
   val optionButtonLayout = l[HorizontalLinearLayout](
     w[Button] <~ text("Tracking Option") <~ On.click(Ui(trackingOptionButton)),
     w[Button] <~ text("My Tracks") <~ On.click(Ui(myTracksOptionButton)))
 
   val homeLayout = l[FrameLayout](f[MapFragment].framed(Id.map, Tag.map)
     <~ lp[FrameLayout](LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-
-  var actionBar: ActionBar = null
 
   /*
    * Activity related function
@@ -108,7 +116,16 @@ class Widigo extends Activity with Contexts[Activity]
 
     setContentView(homeLayout.get)
 
-    // Requirements
+    // Initializes the ActionBar
+    var actionBar: ActionBar = getActionBar
+    // Hide the title of the app to leave more place for options buttons
+    actionBar.setCustomView(optionButtonLayout.get)
+    actionBar.setDisplayOptions(
+      ActionBar.DISPLAY_SHOW_CUSTOM | ActionBar.DISPLAY_USE_LOGO,
+      ActionBar.DISPLAY_SHOW_CUSTOM | ActionBar.DISPLAY_USE_LOGO |
+      ActionBar.DISPLAY_HOME_AS_UP  | ActionBar.DISPLAY_SHOW_TITLE)
+
+    // Location
     // Create a new global location parameters object
     locationRequest = LocationRequest.create()
 
@@ -119,10 +136,15 @@ class Widigo extends Activity with Contexts[Activity]
 
     // Create a new location client, using the enclosing class to
     // handle callbacks.
-    locationClient = new LocationClient(this, this, this)
+    if (locationClient == null)
+      locationClient = new LocationClient(this, this, this)
 
     locationClient.connect
 
+    // Get a handle to the preferences and the database of the Application
+    prefs = getApplicationContext.getSharedPreferences(SHARED_PREFERENCES,
+      Context.MODE_PRIVATE)
+    dbHelper = new DbHelper(this)
   }
 
   override def onStart {
@@ -133,9 +155,23 @@ class Widigo extends Activity with Contexts[Activity]
     .asInstanceOf[MapFragment].getMap();
 
     if (!servicesConnected) {
-      logE"Cannot connect to fucking Google play services"
+      logE"Cannot connect to Google play services"
       return // Can't I do something better?
     }
+
+    if (!locationUpdatesRequested && locationClientConnected) {
+      locationClient.requestLocationUpdates(locationRequest, this)
+      locationUpdatesRequested = true
+    }
+  }
+
+  // Register the broadcast receiver and update the log of activity updates
+  override def onResume() {
+    super.onResume();
+
+    // We launch this code when we start the app and we are back from the
+    // Options activities.
+    updateTracesOnMap()
 
     // TODO
     // Get the preferences and start/continue/stop the Activity Intent if
@@ -144,53 +180,30 @@ class Widigo extends Activity with Contexts[Activity]
     // Start the requests for activity recognition updates.
     //requestType = REQUEST_TYPE_ADD_UPDATES
     //detectionRequester.requestUpdates
-  }
-
-  // Register the broadcast receiver and update the log of activity updates
-  override def onResume() {
-    super.onResume();
-
-    // Renew the actionBar
-    actionBar = getActionBar
-    // Hide the title of the app to leave more place for options buttons
-    actionBar.setCustomView(optionButtonLayout.get)
-    actionBar.setDisplayOptions(
-      ActionBar.DISPLAY_SHOW_CUSTOM | ActionBar.DISPLAY_USE_LOGO,
-      ActionBar.DISPLAY_HOME_AS_UP | ActionBar.DISPLAY_SHOW_CUSTOM |
-      ActionBar.DISPLAY_USE_LOGO | ActionBar.DISPLAY_SHOW_TITLE)
-
-    // TODO add a variable set at true when locationClient is connected
-    //if (!locationUpdatesRequested)
-    //  locationClient.requestLocationUpdates(locationRequest, this)
-
-    // TODO
-    // Get the preferences and start/continue/stop the Activity Intent if
-    // tracking Switch status has changed.
 
     //// Register the broadcast receiver
     //broadcastManager.registerReceiver(
-      //  updateListReceiver,
-      //  broadcastFilter);
+    //  updateListReceiver,
+    //  broadcastFilter);
 
     //// Load updated activity history
     //updateActivityHistory();
   }
 
-  override def onPause() {
+  override def onStop() {
+    // The activity is no longer visible
     if (locationUpdatesRequested)
       locationClient.removeLocationUpdates(this)
     locationUpdatesRequested = false
     super.onPause
   }
 
-  override def onContentChanged() {
-    logD"Content changed"
-  }
-
   /*
    * Connection callback related functions
    */
   override def onConnected(bundle: Bundle) {
+    locationClientConnected = true
+
     // Initialize the marker displaying the current location
     var currentLocation: Location = null
     while (currentLocation == null)
@@ -198,17 +211,17 @@ class Widigo extends Activity with Contexts[Activity]
 
     val currentLatLng: LatLng = new LatLng(currentLocation.getLatitude, currentLocation.getLongitude)
 
-    marker = marker.position(currentLatLng)
-    map.addMarker(marker)
-
+    updateMarkerOnMap(currentLatLng)
     map.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 16))
 
-    // Start Location request updates
-    locationClient.requestLocationUpdates(locationRequest, this)
-    locationUpdatesRequested = true
+    if (!locationUpdatesRequested && locationClientConnected) {
+      locationClient.requestLocationUpdates(locationRequest, this)
+      locationUpdatesRequested = true
+    }
   }
 
   override def onDisconnected() {
+    locationClientConnected = false
     if (locationUpdatesRequested)
       locationClient.removeLocationUpdates(this)
     locationUpdatesRequested = false
@@ -228,7 +241,7 @@ class Widigo extends Activity with Contexts[Activity]
    * Location Listener related functions
    */
   override def onLocationChanged(currentLocation: Location) {
-    marker.position(new LatLng(currentLocation.getLatitude,
+    updateMarkerOnMap(new LatLng(currentLocation.getLatitude,
       currentLocation.getLongitude))
   }
 
@@ -244,7 +257,7 @@ class Widigo extends Activity with Contexts[Activity]
       return true
     } else {
       // Display an error dialog
-      GooglePlayServicesUtil.showErrorDialogFragment(resultCode, this, 0)
+      //GooglePlayServicesUtil.showErrorDialogFragment(resultCode, this, 0)
       return false
     }
   }
@@ -271,66 +284,60 @@ class Widigo extends Activity with Contexts[Activity]
       logD"Received unknown activity request code ${requestCode} in onActivityResult"
     }
   }
+
+  // Update the traces on the Map
+  def updateTracesOnMap() {
+    map.clear
+
+    marker           = null
+    //widigoActivities = dbHelper.getActivitiesByDate(
+    //  prefs.getLong(KEY_MY_TRACKS_START_DATE, 0),
+    //  prefs.getLong(KEY_MY_TRACKS_STOP_DATE, (new Date()).getTime))
+
+    if (widigoActivities != null) {
+      for (widigoActivity: WidigoActivity <- widigoActivities) {
+        map.addPolyline(widigoActivity.polylineOptions)
+      }
+    }
+  }
+
+  def updateMarkerOnMap(latLng: LatLng) {
+    if (marker == null) {
+      marker = new MarkerOptions()
+      marker = marker.position(latLng)
+      map.addMarker(marker)
+    } else {
+      marker = marker.position(latLng)
+    }
+
+    if (widigoActivities == null) {
+      widigoActivities = List(new WidigoActivity(
+        (new PolylineOptions).add(latLng),
+        -1,
+        DetectedActivity.UNKNOWN,
+        null))
+    } else {
+      // Get the polylineOption of the last activity of the list Activities
+      // and add the point. This operation should be done also by the Location
+      // Service in the database, in this case we do not draw again the full
+      // polylines.
+      widigoActivities.last.polylineOptions.add(latLng)
+    }
+  }
 }
 
 /*
- class Widigo extends Activity with Contexts[Activity]
- // with LocationListener
- with GooglePlayServicesClient.ConnectionCallbacks
- with GooglePlayServicesClient.OnConnectionFailedListener
- with IdGeneration {
+ // On onCreate
+ // Set the broadcast receiver intent filer
+ broadcastManager = LocalBroadcastManager.getInstance(this)
 
-   import Widigo._
+ // Create a new Intent filter for the broadcast receiver
+ broadcastFilter = new IntentFilter(ACTION_REFRESH_STATUS_LIST)
+ broadcastFilter.addCategory(CATEGORY_LOCATION_SERVICES);
 
-   def activityPrintBox(name: Spanned) =
-   text(name) + TextSize.large +
-   Tweak[TextView]{ _.setGravity(Gravity.CENTER) } +
-   lp[LinearLayout](LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT, 1.0f)
-
-   override def onCreate(bundle: Bundle) {
-     super.onCreate(bundle)
-
-     // Layout
-     val layout = l[FrameLayout](
-       //w[TextView] <~ text(status) <~ wire(statusTextBox),
-       f[MapFragment].framed(Id.map, Tag.map) <~
-       lp[FrameLayout](LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
-     )
-   setContentView(layout.get)
-
-   // Requirements
-   // Create a new global location parameters object
-   locationRequest = LocationRequest.create()
-
-   // Set the update interval
-   locationRequest.setInterval(UPDATE_INTERVAL_IN_MILLISECONDS)
-
-   // Use high accuracy
-   locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-
-   // Set the interval ceiling to one minute
-   locationRequest.setFastestInterval(FAST_INTERVAL_CEILING_IN_MILLISECONDS)
-
-   // Create a new location client, using the enclosing class to
-   // handle callbacks.
-   locationClient = new LocationClient(this, this, this)
-
-   status = "Ready"
-   (statusTextBox <~ text(status)).run
-
-   // Set the broadcast receiver intent filer
-   broadcastManager = LocalBroadcastManager.getInstance(this)
-
-   // Create a new Intent filter for the broadcast receiver
-   broadcastFilter = new IntentFilter(ACTION_REFRESH_STATUS_LIST)
-   broadcastFilter.addCategory(CATEGORY_LOCATION_SERVICES);
-
-   // Get detection requester and remover objects
-   detectionRequester = new DetectionRequester(this)
-   detectionRemover   = new DetectionRemover(this)
-
-   // Create a new LogFile object
-   logFile = LogFile.getInstance(this)
+ // Get detection requester and remover objects
+ detectionRequester = new DetectionRequester(this)
+ detectionRemover   = new DetectionRemover(this)
  }
 
  // Display the activity detection history stored in the
@@ -344,55 +351,17 @@ class Widigo extends Activity with Contexts[Activity]
    }
  }
 }
+
+
+// Pop-up dialod for GPS settings
+
+lazy val goToSettings = {
+  lazy val intent: Intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+  this.startActivity(intent)
+}
+
+val dialogView = l[VerticalLinearLayout] (
+  w[TextView] <~ text("Please enable GPS in settings"),
+  w[Button] <~ text("Go to Settings") <~ On.click(Ui(goToSettings)))
+(dialog(dialogView) <~ title("GPS needed") <~ speak).run
 */
-
-/*
- * Actually I don't want the requests to stop
-
-
-
- def startPeriodicUpdates {
-   locationClient.requestLocationUpdates(locationRequest, this)
- }
-
- def stopPeriodicUpdates {
-   locationClient.removeLocationUpdates(this)
- }
-
- def startUpdates {
-   if (servicesConnected)
-     startPeriodicUpdates
- }
-
- def stopUpdates {
-   if (servicesConnected)
-     stopPeriodicUpdates
- }
-
- def getLocation {
-   if (servicesConnected) {
-     val currentLocation: Location = locationClient.getLastLocation()
-     if (currentLocation == null) {
-       lazy val goToSettings = {
-         lazy val intent: Intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-         this.startActivity(intent)
-       }
-       val dialogView = l[VerticalLinearLayout] (
-         w[TextView] <~ text("Please enable GPS in settings"),
-         w[Button] <~ text("Go to Settings") <~ On.click(Ui(goToSettings)))
-       (dialog(dialogView) <~ title("GPS needed") <~ speak).run
-
-     } else {
-       onLocationChanged(currentLocation)
-     }
-   }
- }
-
- override def onRestart()
-
- override def onPause()
-
- override def onStop()
-
- override def onDestroy()
- */
