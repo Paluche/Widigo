@@ -26,8 +26,9 @@ object Options {
 }
 
 class TrackingOption(var trackingOn: Boolean, var trackingStill: Boolean,
-  var trackingWalking: Boolean, var trackingRunning: Boolean,
-  var trackingInVehicle: Boolean, var trackingOnBicycle : Boolean)
+  var trackingOnFoot: Boolean, var trackingWalking: Boolean,
+  var trackingRunning: Boolean, var trackingInVehicle: Boolean,
+  var trackingOnBicycle : Boolean)
 
 class TrackingOptionActivity extends Activity
 with Contexts[Activity]
@@ -37,6 +38,7 @@ with IdGeneration {
 
   var trackingOnSwitch:  Switch   = null
   var stillCheckBox:     CheckBox = null
+  var onFootCheckBox:    CheckBox = null
   var walkingCheckBox:   CheckBox = null
   var runningCheckBox:   CheckBox = null
   var inVehicleCheckBox: CheckBox = null
@@ -46,6 +48,7 @@ with IdGeneration {
     w[Switch]   <~ id(Id.trackingOnSwitch) <~ text("Tracking On"),
     w[TextView] <~ text("\n  Specify Activities"),
     w[CheckBox] <~ id(Id.stillCheckBox)     <~ text("Still"),
+    w[CheckBox] <~ id(Id.onFootCheckBox)    <~ text("On foot"),
     w[CheckBox] <~ id(Id.walkingCheckBox)   <~ text("Walking"),
     w[CheckBox] <~ id(Id.runningCheckBox)   <~ text("Running"),
     w[CheckBox] <~ id(Id.inVehicleCheckBox) <~ text("In vehicle"),
@@ -68,6 +71,7 @@ with IdGeneration {
     // Get the different switch and checkboxes
     trackingOnSwitch  = findViewById(Id.trackingOnSwitch).asInstanceOf[Switch]
     stillCheckBox     = findViewById(Id.stillCheckBox).asInstanceOf[CheckBox]
+    onFootCheckBox    = findViewById(Id.onFootCheckBox).asInstanceOf[CheckBox]
     walkingCheckBox   = findViewById(Id.walkingCheckBox).asInstanceOf[CheckBox]
     runningCheckBox   = findViewById(Id.runningCheckBox).asInstanceOf[CheckBox]
     inVehicleCheckBox = findViewById(Id.inVehicleCheckBox).asInstanceOf[CheckBox]
@@ -75,6 +79,7 @@ with IdGeneration {
 
     trackingOnSwitch.setChecked(trackingOption.trackingOn)
     stillCheckBox.setChecked(trackingOption.trackingStill)
+    onFootCheckBox.setChecked(trackingOption.trackingOnFoot)
     walkingCheckBox.setChecked(trackingOption.trackingWalking)
     runningCheckBox.setChecked(trackingOption.trackingRunning)
     inVehicleCheckBox.setChecked(trackingOption.trackingInVehicle)
@@ -95,9 +100,10 @@ with IdGeneration {
     // Check if the Keys exist
     if ((!prefs.contains(KEY_TRACKING_ON))        ||
       (!prefs.contains(KEY_TRACKING_STILL))       ||
+      (!prefs.contains(KEY_TRACKING_ON_FOOT))     ||
       (!prefs.contains(KEY_TRACKING_WALKING))     ||
       (!prefs.contains(KEY_TRACKING_RUNNING))     ||
-      (!prefs.contains(KEY_TRACKING_IN_VEHICULE)) ||
+      (!prefs.contains(KEY_TRACKING_IN_VEHICLE)) ||
       (!prefs.contains(KEY_TRACKING_ON_BICYCLE))) {
       var editor: Editor = prefs.edit()
 
@@ -107,14 +113,17 @@ with IdGeneration {
       if (!prefs.contains(KEY_TRACKING_STILL))
         editor.putBoolean(KEY_TRACKING_STILL, true)
 
+      if (!prefs.contains(KEY_TRACKING_ON_FOOT))
+        editor.putBoolean(KEY_TRACKING_ON_FOOT, true)
+
       if (!prefs.contains(KEY_TRACKING_WALKING))
         editor.putBoolean(KEY_TRACKING_WALKING, true)
 
       if (!prefs.contains(KEY_TRACKING_RUNNING))
         editor.putBoolean(KEY_TRACKING_RUNNING, true)
 
-      if (!prefs.contains(KEY_TRACKING_IN_VEHICULE))
-        editor.putBoolean(KEY_TRACKING_IN_VEHICULE, true)
+      if (!prefs.contains(KEY_TRACKING_IN_VEHICLE))
+        editor.putBoolean(KEY_TRACKING_IN_VEHICLE, true)
 
       if (!prefs.contains(KEY_TRACKING_ON_BICYCLE))
         editor.putBoolean(KEY_TRACKING_ON_BICYCLE, true)
@@ -123,21 +132,22 @@ with IdGeneration {
     }
 
     new TrackingOption(
-      prefs.getBoolean(KEY_TRACKING_ON, false),
-      prefs.getBoolean(KEY_TRACKING_STILL, false),
-      prefs.getBoolean(KEY_TRACKING_WALKING, false),
-      prefs.getBoolean(KEY_TRACKING_RUNNING, false),
-      prefs.getBoolean(KEY_TRACKING_IN_VEHICULE, false),
-      prefs.getBoolean(KEY_TRACKING_ON_BICYCLE, false))
+      prefs.getBoolean(KEY_TRACKING_ON,         false),
+      prefs.getBoolean(KEY_TRACKING_STILL,      true),
+      prefs.getBoolean(KEY_TRACKING_ON_FOOT,    true),
+      prefs.getBoolean(KEY_TRACKING_WALKING,    true),
+      prefs.getBoolean(KEY_TRACKING_RUNNING,    true),
+      prefs.getBoolean(KEY_TRACKING_IN_VEHICLE, true),
+      prefs.getBoolean(KEY_TRACKING_ON_BICYCLE, true))
   }
 
   lazy val saveTrackingOption = {
     var editor: Editor = prefs.edit()
-    editor.putBoolean(KEY_TRACKING_ON, trackingOnSwitch.isChecked)
-    editor.putBoolean(KEY_TRACKING_STILL, stillCheckBox.isChecked)
-    editor.putBoolean(KEY_TRACKING_WALKING, walkingCheckBox.isChecked)
-    editor.putBoolean(KEY_TRACKING_RUNNING, runningCheckBox.isChecked)
-    editor.putBoolean(KEY_TRACKING_IN_VEHICULE, inVehicleCheckBox.isChecked)
+    editor.putBoolean(KEY_TRACKING_ON,         trackingOnSwitch.isChecked)
+    editor.putBoolean(KEY_TRACKING_STILL,      stillCheckBox.isChecked)
+    editor.putBoolean(KEY_TRACKING_WALKING,    walkingCheckBox.isChecked)
+    editor.putBoolean(KEY_TRACKING_RUNNING,    runningCheckBox.isChecked)
+    editor.putBoolean(KEY_TRACKING_IN_VEHICLE, inVehicleCheckBox.isChecked)
     editor.putBoolean(KEY_TRACKING_ON_BICYCLE, onBicycleCheckBox.isChecked)
     editor.commit()
   }

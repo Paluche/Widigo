@@ -57,63 +57,89 @@ with ConnectionCallbacks {
     prefs = getApplicationContext.getSharedPreferences(SHARED_PREFERENCES,
       Context.MODE_PRIVATE)
 
-    // If the intent contains an Activity update
-    if (ActivityRecognitionResult.hasResult(intent)) {
-      // Get the update
-      var result: ActivityRecognitionResult = ActivityRecognitionResult.extractResult(intent)
+    if (prefs.getBoolean(KEY_TRACKING_ON, false)) {
+      // Tracking activated
 
-      // Get the most probable activity from the list of activities in the update
-      var currentActivity: DetectedActivity = result.getMostProbableActivity()
+      // If the intent contains an Activity update
+      if (ActivityRecognitionResult.hasResult(intent)) {
+        // Get the update
+        var result: ActivityRecognitionResult = ActivityRecognitionResult.extractResult(intent)
 
-      // Get the confidence percentage for the most probable activity
-      var currentActivityConfidence: Int = currentActivity.getConfidence()
+        // Get the most probable activity from the list of activities in the update
+        var currentActivity: DetectedActivity = result.getMostProbableActivity()
 
-      // Get the type of activity
-      var currentActivityType: Int = currentActivity.getType()
+        // Get the confidence percentage for the most probable activity
+        var currentActivityConfidence: Int = currentActivity.getConfidence()
 
-      // Check to see if the repository contains a previous activity
-      if (!prefs.contains(KEY_PREVIOUS_ACTIVITY_TYPE) ||
-        !prefs.contains(KEY_PREVIOUS_ACTIVITY_ID)) {
+        // Get the type of activity
+        var currentActivityType: Int = currentActivity.getType()
 
-        // This is the first type an activity has been detected. Store the type
-        // and initialise the ID
+        // Check if the tracking is activated for this kind of activity
+        if (!(currentActivityType match {
+            case DetectedActivity.TILTING | DetectedActivity.UNKNOWN =>
+            false
+            case DetectedActivity.STILL      => prefs.getBoolean(
+              KEY_TRACKING_STILL,      false)
+            case DetectedActivity.ON_FOOT    => prefs.getBoolean(
+              KEY_TRACKING_ON_FOOT,    false)
+            case DetectedActivity.WALKING    => prefs.getBoolean(
+              KEY_TRACKING_WALKING,    false)
+            case DetectedActivity.RUNNING    => prefs.getBoolean(
+              KEY_TRACKING_RUNNING,    false)
+            case DetectedActivity.IN_VEHICLE => prefs.getBoolean(
+              KEY_TRACKING_IN_VEHICLE, false)
+            case DetectedActivity.ON_BICYCLE => prefs.getBoolean(
+              KEY_TRACKING_ON_BICYCLE, false)
+          }))
+        return
 
-        // Retrieve from the database the type and ID of the last
-        // activity saved
-        var dbHelper: DbHelper = new DbHelper(this)
-        var widigoActivity: WidigoActivity = dbHelper.getLastActivityIdAndType()
 
-        var editor: Editor = prefs.edit()
-        if (widigoActivity == null) {
-          editor.putInt(KEY_PREVIOUS_ACTIVITY_TYPE, DetectedActivity.UNKNOWN)
-          editor.putInt(KEY_PREVIOUS_ACTIVITY_ID,   0)
 
-        } else {
-          editor.putInt(KEY_PREVIOUS_ACTIVITY_TYPE, widigoActivity.activityType)
-          editor.putInt(KEY_PREVIOUS_ACTIVITY_ID,   widigoActivity.activityID)
+
+        // Check to see if the repository contains a previous activity
+        if (!prefs.contains(KEY_PREVIOUS_ACTIVITY_TYPE) ||
+          !prefs.contains(KEY_PREVIOUS_ACTIVITY_ID)) {
+
+          // This is the first type an activity has been detected. Store the type
+          // and initialise the ID
+
+          // Retrieve from the database the type and ID of the last
+          // activity saved
+          var dbHelper: DbHelper = new DbHelper(this)
+          var widigoActivity: WidigoActivity = dbHelper.getLastActivityIdAndType()
+
+          var editor: Editor = prefs.edit()
+          if (widigoActivity == null) {
+            editor.putInt(KEY_PREVIOUS_ACTIVITY_TYPE, DetectedActivity.UNKNOWN)
+            editor.putInt(KEY_PREVIOUS_ACTIVITY_ID,   0)
+
+          } else {
+            editor.putInt(KEY_PREVIOUS_ACTIVITY_TYPE, widigoActivity.activityType)
+            editor.putInt(KEY_PREVIOUS_ACTIVITY_ID,   widigoActivity.activityID)
+          }
+          editor.commit()
         }
-        editor.commit()
-      }
 
-      var previousActivityType: Int = prefs.getInt(KEY_PREVIOUS_ACTIVITY_TYPE,
-        DetectedActivity.UNKNOWN)
+        var previousActivityType: Int = prefs.getInt(KEY_PREVIOUS_ACTIVITY_TYPE,
+          DetectedActivity.UNKNOWN)
 
-      // Activity changed
-      if (previousActivityType != currentActivityType) {
-        if (!isMoving(previousActivityType) && isMoving(currentActivityType)) {
-          //Start location updates service
-          // TODO
-        } else if (isMoving(previousActivityType) && !isMoving(currentActivityType)) {
-          // Stop location updates service
-          // TODO
+        // Activity changed
+        if (previousActivityType != currentActivityType) {
+          if (!isMoving(previousActivityType) && isMoving(currentActivityType)) {
+            //Start location updates service
+            // TODO
+          } else if (isMoving(previousActivityType) && !isMoving(currentActivityType)) {
+            // Stop location updates service
+            // TODO
+          }
+
+          // Retrieve the last Location known
+          // And push the data in the database
+          // This will be done in the onConnect callback since we only use the
+          // location Client for it.
+          locationClient = new LocationClient(this, this, null)
+          locationClient.connect
         }
-
-        // Retrieve the last Location known
-        // And push the data in the database
-        // This will be done in the onConnect callback since we only use the
-        // location Client for it.
-        locationClient = new LocationClient(this, this, null)
-        locationClient.connect
       }
     }
   }

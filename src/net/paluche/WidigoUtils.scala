@@ -63,12 +63,14 @@ object WidigoUtils {
     "net.paluche.widigo.KEY_TRACKING_ON"
   val KEY_TRACKING_STILL: String =
     "net.paluche.widigo.KEY_TRACKING_STILL"
+  val KEY_TRACKING_ON_FOOT: String =
+    "net.paluche.widigo.KEY_TRACKING_ON_FOOT"
   val KEY_TRACKING_WALKING: String =
     "net.paluche.widigo.KEY_TRACKING_WALKING"
   val KEY_TRACKING_RUNNING: String =
     "net.paluche.widigo.KEY_TRACKING_RUNNING"
-  val KEY_TRACKING_IN_VEHICULE: String =
-    "net.paluche.widigo.KEY_TRACKING_IN_VEHICULE"
+  val KEY_TRACKING_IN_VEHICLE: String =
+    "net.paluche.widigo.KEY_TRACKING_IN_VEHICLE"
   val KEY_TRACKING_ON_BICYCLE: String =
     "net.paluche.widigo.KEY_TRACKING_ON_BICYCLE"
 
