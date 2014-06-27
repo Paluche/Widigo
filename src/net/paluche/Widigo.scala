@@ -174,6 +174,10 @@ class Widigo extends Activity with Contexts[Activity]
     // Options activities.
     updateTracesOnMap()
 
+    if (locationClientConnected) {
+      var currentLocation = locationClient.getLastLocation()
+      updateMarkerOnMap(new LatLng(currentLocation.getLatitude, currentLocation.getLongitude))
+    }
     if (prefs.getBoolean(KEY_TRACKING_ON, false)) {
       if (statusActivityDetection != STATUS_ACTIVITY_DETECTION_REQUESTED) {
         // Start the requests for activity recognition updates.
@@ -208,8 +212,7 @@ class Widigo extends Activity with Contexts[Activity]
 
     // Initialize the marker displaying the current location
     var currentLocation: Location = null
-    while (currentLocation == null)
-      currentLocation = locationClient.getLastLocation()
+    currentLocation = locationClient.getLastLocation()
 
     val currentLatLng: LatLng = new LatLng(currentLocation.getLatitude, currentLocation.getLongitude)
 
@@ -297,9 +300,6 @@ class Widigo extends Activity with Contexts[Activity]
         map.addPolyline(widigoActivity.polylineOptions)
       }
     }
-
-    // TODO remove TEST
-    dbHelper.getLastActivityIdAndType()
   }
 
   def updateMarkerOnMap(latLng: LatLng) {

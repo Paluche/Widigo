@@ -83,15 +83,4 @@ object WidigoUtils {
     "net.paluche.widigo.KEY_MY_TRACKS_START_DATE"
   val KEY_MY_TRACKS_STOP_DATE: String =
     "net.paluche.widigo.KEY_MY_TRACKS_STOP_DATE"
-
-  // Constants for constructing the log file name
-  // TODO remove this
-  val LOG_FILE_NAME_PREFIX: String = "activityrecognition"
-  val LOG_FILE_NAME_SUFFIX: String = ".log"
-
-  // Keys in the repository for storing the log file info
-  val KEY_LOG_FILE_NUMBER: String =
-    "net.paluche.widigo.KEY_LOG_FILE_NUMBER"
-  val KEY_LOG_FILE_NAME: String =
-    "net.paluche.widigo.KEY_LOG_FILE_NAME"
 }
