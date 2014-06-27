@@ -129,6 +129,12 @@ extends IntentService("WidigoIntentService") with ConnectionCallbacks {
             stopService(new Intent(this, classOf[LocationService]))
           }
 
+          // Increase Activity identifier
+          var editor: Editor = prefs.edit()
+          editor.putInt(KEY_PREVIOUS_ACTIVITY_ID,
+            prefs.getInt(KEY_PREVIOUS_ACTIVITY_ID, -1) + 1)
+
+
           // Retrieve the last Location known
           // And push the data in the database
           // This will be done in the onConnect callback since we only use the
