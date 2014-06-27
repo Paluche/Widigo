@@ -72,7 +72,6 @@ class Widigo extends Activity with Contexts[Activity]
 
   // Datas of the application
   private var prefs:                    SharedPreferences     = null
-  private var dbHelper:                 DbHelper              = null
 
   // Map
   var map:                              GoogleMap             = null
@@ -85,7 +84,7 @@ class Widigo extends Activity with Contexts[Activity]
   /*
    * Buttons actions
    */
-  // Content view.
+  // Content view
   lazy val trackingOptionButton = {
     startActivity(new Intent(this, classOf[TrackingOptionActivity]))
   }
@@ -141,7 +140,6 @@ class Widigo extends Activity with Contexts[Activity]
     // Get a handle to the preferences and the database of the Application
     prefs = getApplicationContext.getSharedPreferences(SHARED_PREFERENCES,
       Context.MODE_PRIVATE)
-    dbHelper = new DbHelper(this)
 
     // Get detection requester and remover objects
     detectionRequester = new DetectionRequester(this)
@@ -291,9 +289,11 @@ class Widigo extends Activity with Contexts[Activity]
     map.clear
 
     marker           = null
+    var dbHelper: DbHelper = new DbHelper(this)
     widigoActivities = dbHelper.getActivitiesByDate(
       prefs.getLong(KEY_MY_TRACKS_START_DATE, 0),
       prefs.getLong(KEY_MY_TRACKS_STOP_DATE, (new Date()).getTime))
+    dbHelper.close
 
     if (widigoActivities != null) {
       for (widigoActivity: WidigoActivity <- widigoActivities) {

@@ -73,7 +73,8 @@ class DbHelper(context: Context) extends SQLiteOpenHelper(context,
   }
 
   def onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-    // I don't know what to do
+    db.execSQL("DROP TABLE " + tableName + ";");
+    onCreate(db);
   }
 
   /*
@@ -224,7 +225,8 @@ class DbHelper(context: Context) extends SQLiteOpenHelper(context,
   /*
    * Remove an Activity
    */
-  def removeActivitybyID(db: SQLiteDatabase, activityID: Integer) {
+  def removeActivitybyID(activityID: Integer) {
+    val db: SQLiteDatabase = this.getWritableDatabase();
     db.delete(
       tableName,
       columnNameActivityID + " = ?",

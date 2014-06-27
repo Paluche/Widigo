@@ -65,6 +65,7 @@ class LocationService extends Service with LocationListener
         currentLocation,
         prefs.getInt(KEY_PREVIOUS_ACTIVITY_TYPE, DetectedActivity.UNKNOWN),
         prefs.getInt(KEY_PREVIOUS_ACTIVITY_ID, -1))
+      dbHelper.close
     }
   }
 

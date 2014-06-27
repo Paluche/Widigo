@@ -102,6 +102,7 @@ extends IntentService("WidigoIntentService") with ConnectionCallbacks {
           // activity saved
           var dbHelper: DbHelper = new DbHelper(this)
           var widigoActivity: WidigoActivity = dbHelper.getLastActivityIdAndType()
+          dbHelper.close
 
           var editor: Editor = prefs.edit()
           if (widigoActivity == null) {
@@ -151,16 +152,17 @@ extends IntentService("WidigoIntentService") with ConnectionCallbacks {
    */
   override def onConnected(bundle: Bundle) {
     // Get a handle to the datas
-    var dbHelper: DbHelper = new DbHelper(this)
 
     val currentLocation: Location = locationClient.getLastLocation()
 
     if (currentLocation != null) {
+      var dbHelper: DbHelper = new DbHelper(this)
       // Push to database
       dbHelper.addActivityEntry(
         currentLocation,
         prefs.getInt(KEY_PREVIOUS_ACTIVITY_TYPE, DetectedActivity.UNKNOWN),
         prefs.getInt(KEY_PREVIOUS_ACTIVITY_ID, 0))
+      dbHelper.close
     } else {
       // TODO display a notification for that the user activate the GPS
     }
