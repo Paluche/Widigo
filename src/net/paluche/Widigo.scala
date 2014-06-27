@@ -57,12 +57,10 @@ class Widigo extends Activity with Contexts[Activity]
     with IdGeneration {
 
   import WidigoUtils._
-
-  // Intent for activity recognition needs
-  private var broadcastFilter:          IntentFilter          = null
-  private var broadcastManager:         LocalBroadcastManager = null
+  // Activity detection handler
   private var detectionRequester:       DetectionRequester    = null
   private var detectionRemover:         DetectionRemover      = null
+  private var statusActivityDetection:  Int                   = STATUS_ACTIVITY_DETECTION_UNKNOWN
 
   private var requestType:              Int                   = -1
 
@@ -137,12 +135,17 @@ class Widigo extends Activity with Contexts[Activity]
     if (locationClient == null)
       locationClient = new LocationClient(this, this, this)
 
+    requestType = REQUEST_TYPE_CONNECT_CLIENT
     locationClient.connect
 
     // Get a handle to the preferences and the database of the Application
     prefs = getApplicationContext.getSharedPreferences(SHARED_PREFERENCES,
       Context.MODE_PRIVATE)
     dbHelper = new DbHelper(this)
+
+    // Get detection requester and remover objects
+    detectionRequester = new DetectionRequester(this)
+    detectionRemover   = new DetectionRemover(this)
   }
 
   override def onStart {
@@ -171,25 +174,22 @@ class Widigo extends Activity with Contexts[Activity]
     // Options activities.
     updateTracesOnMap()
 
-    if (prefs.getBoolean(KEY_TRACKING_ON, false))
-      // Start the IntentService
-    {}
-
-    // TODO
-    // Get the preferences and start/continue/stop the Activity Intent if
-    // tracking Switch status has changed.
-
-    // Start the requests for activity recognition updates.
-    //requestType = REQUEST_TYPE_ADD_UPDATES
-    //detectionRequester.requestUpdates
-
-    //// Register the broadcast receiver
-    //broadcastManager.registerReceiver(
-    //  updateListReceiver,
-    //  broadcastFilter);
-
-    //// Load updated activity history
-    //updateActivityHistory();
+    if (prefs.getBoolean(KEY_TRACKING_ON, false)) {
+      if (statusActivityDetection != STATUS_ACTIVITY_DETECTION_REQUESTED) {
+        // Start the requests for activity recognition updates.
+        requestType = REQUEST_TYPE_ADD_UPDATES
+        statusActivityDetection = STATUS_ACTIVITY_DETECTION_REQUESTED
+        if (servicesConnected)
+          detectionRequester.requestUpdates()
+      }
+    } else {
+      if (statusActivityDetection != STATUS_ACTIVITY_DETECTION_REMOVED) {
+        requestType = REQUEST_TYPE_REMOVE_UPDATES
+        statusActivityDetection = STATUS_ACTIVITY_DETECTION_REMOVED
+        if (servicesConnected)
+        detectionRemover.removeUpdates(detectionRequester.getRequestPendingIntent)
+      }
+    }
   }
 
   override def onStop() {
@@ -251,7 +251,6 @@ class Widigo extends Activity with Contexts[Activity]
    * Other functions
    */
   def servicesConnected: Boolean = {
-    requestType = REQUEST_TYPE_CONNECT_CLIENT
     var resultCode: Int = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this)
 
     if (resultCode == ConnectionResult.SUCCESS) {
@@ -259,7 +258,7 @@ class Widigo extends Activity with Contexts[Activity]
       return true
     } else {
       // Display an error dialog
-      //GooglePlayServicesUtil.showErrorDialogFragment(resultCode, this, 0)
+      GooglePlayServicesUtil.showErrorDialogFragment(resultCode, this, 0)
       return false
     }
   }
@@ -269,12 +268,9 @@ class Widigo extends Activity with Contexts[Activity]
     if (requestCode == CONNECTION_FAILURE_RESOLUTION_REQUEST) {
       if (resultCode == Activity.RESULT_OK) {
         requestType match {
-          case REQUEST_TYPE_CONNECT_CLIENT => {
-            logD"Error resolved, please re-try operation"
-          }
+          case REQUEST_TYPE_CONNECT_CLIENT => locationClient.connect()
 
-          case REQUEST_TYPE_ADD_UPDATES =>
-          detectionRequester.requestUpdates()
+          case REQUEST_TYPE_ADD_UPDATES => detectionRequester.requestUpdates()
 
           case REQUEST_TYPE_REMOVE_UPDATES =>
           detectionRemover.removeUpdates(detectionRequester.getRequestPendingIntent)
@@ -340,9 +336,6 @@ class Widigo extends Activity with Contexts[Activity]
  broadcastFilter = new IntentFilter(ACTION_REFRESH_STATUS_LIST)
  broadcastFilter.addCategory(CATEGORY_LOCATION_SERVICES);
 
- // Get detection requester and remover objects
- detectionRequester = new DetectionRequester(this)
- detectionRemover   = new DetectionRemover(this)
  }
 
  // Display the activity detection history stored in the

@@ -41,8 +41,7 @@ import macroid.FullDsl._
 import scala.util.control._
 
 class ActivityRecognitionIntentService
-extends IntentService("WidigoIntentService")
-with ConnectionCallbacks {
+extends IntentService("WidigoIntentService") with ConnectionCallbacks {
 
   import WidigoUtils._
 
@@ -93,10 +92,6 @@ with ConnectionCallbacks {
           }))
         return
 
-
-
-
-        // Check to see if the repository contains a previous activity
         if (!prefs.contains(KEY_PREVIOUS_ACTIVITY_TYPE) ||
           !prefs.contains(KEY_PREVIOUS_ACTIVITY_ID)) {
 
@@ -127,10 +122,11 @@ with ConnectionCallbacks {
         if (previousActivityType != currentActivityType) {
           if (!isMoving(previousActivityType) && isMoving(currentActivityType)) {
             //Start location updates service
-            // TODO
+            startService(new Intent(this, classOf[LocationService]))
+
           } else if (isMoving(previousActivityType) && !isMoving(currentActivityType)) {
             // Stop location updates service
-            // TODO
+            stopService(new Intent(this, classOf[LocationService]))
           }
 
           // Retrieve the last Location known
