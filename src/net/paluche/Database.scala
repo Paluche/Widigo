@@ -38,6 +38,7 @@ class DbHelper(context: Context) extends SQLiteOpenHelper(context,
   val tableName:              String = "activityPoints"
 
   // Columns name definition
+  val columnNameKey:          String = "key"
   val columnNameTimestamp:    String = "timestamp"
   val columnNameActivityID:   String = "activityID"
   val columnNameActivityType: String = "activityType"
@@ -58,12 +59,18 @@ class DbHelper(context: Context) extends SQLiteOpenHelper(context,
   // SQLite helpers
   val intType:                String = " INTEGER"
   val realType:               String = " REAL"
-  val commaSep:               String = ","
+  val commaSep:               String = ", "
 
-  def onCreate(db: SQLiteDatabase) {
+  // Columns that interrest us in the request
+  val projection: Array[String] = Array(columnNameTimestamp,
+    columnNameActivityID, columnNameActivityType, columnNameLatitude,
+    columnNameLongitude, columnNameAltitude, columnNameSpeed)
+
+ def onCreate(db: SQLiteDatabase) {
     db.execSQL(
-      "CREATE TABLE " + tableName + " (" +
-      columnNameTimestamp    + intType  + " PRIMARY KEY" + commaSep +
+      "CREATE TABLE " + tableName       + " (" +
+      columnNameKey   + " PRIMARY KEY"  + commaSep +
+      columnNameTimestamp    + intType  + commaSep +
       columnNameActivityType + intType  + commaSep +
       columnNameActivityID   + intType  + commaSep +
       columnNameLatitude     + realType + commaSep +
@@ -75,33 +82,6 @@ class DbHelper(context: Context) extends SQLiteOpenHelper(context,
   def onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
     db.execSQL("DROP TABLE " + tableName + ";");
     onCreate(db);
-  }
-
-  /*
-   * Add data
-   */
-  def addActivityEntry(location: Location, activityType: Integer,
-    activityID: Integer): Long = {
-    val db: SQLiteDatabase = this.getWritableDatabase();
-    var values: ContentValues = new ContentValues()
-
-    values.put(columnNameTimestamp, location.getTime.asInstanceOf[java.lang.Long])
-    values.put(columnNameActivityType, activityType)
-    values.put(columnNameActivityID, activityID)
-    values.put(columnNameLatitude, location.getLatitude)
-    values.put(columnNameLongitude, location.getLongitude)
-
-    if (location.hasAltitude)
-      values.put(columnNameAltitude, location.getAltitude)
-    else
-      values.putNull(columnNameAltitude)
-
-    if (location.hasSpeed)
-      values.put(columnNameSpeed, location.getSpeed.toDouble)
-    else
-      values.putNull(columnNameSpeed)
-
-    return db.insert(tableName, null, values)
   }
 
   /*
@@ -123,7 +103,7 @@ class DbHelper(context: Context) extends SQLiteOpenHelper(context,
 
     db.query(
       tableName,            // The table name
-      null,                 // We want all the columns
+      projection,           // We want all the columns except the key
       columnNameTimestamp + " <= ? AND " +
       columnNameTimestamp + ">= ?",
       Array(                // Argument for the WHERE clause
@@ -133,6 +113,47 @@ class DbHelper(context: Context) extends SQLiteOpenHelper(context,
       null,                 // Don't filter by group rows
       columnNameTimestamp + " DESC")
   }
+
+  private def getLastkey(): java.lang.Long = {
+    val db: SQLiteDatabase  = this.getReadableDatabase();
+    val cursor: Cursor = db.rawQuery("SELECT MAX(" + columnNameKey +
+      ") FROM " + tableName, null)
+    cursor.moveToFirst
+    if (cursor.getCount == 0)
+      return 0
+    val ret: Long = cursor.getInt(0)
+    cursor.close
+    ret
+  }
+
+  /*
+   * Add data
+   */
+  def addActivityEntry(location: Location, activityType: Integer,
+    activityID: Integer): Long = {
+    val db: SQLiteDatabase = this.getWritableDatabase();
+    var values: ContentValues = new ContentValues()
+
+    values.put(columnNameKey, getLastkey())
+    values.put(columnNameTimestamp, location.getTime.asInstanceOf[java.lang.Long])
+    values.put(columnNameActivityType, activityType)
+    values.put(columnNameActivityID, activityID)
+    values.put(columnNameLatitude, location.getLatitude)
+    values.put(columnNameLongitude, location.getLongitude)
+
+    if (location.hasAltitude)
+      values.put(columnNameAltitude, location.getAltitude)
+    else
+      values.putNull(columnNameAltitude)
+
+    if (location.hasSpeed)
+      values.put(columnNameSpeed, location.getSpeed.toDouble)
+    else
+      values.putNull(columnNameSpeed)
+
+    return db.insert(tableName, null, values)
+  }
+
 
   /*
    * Getting data from the database
